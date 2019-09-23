@@ -2,7 +2,7 @@ import { HelloWorld } from "../src/index";
 import { expect } from "chai";
 
 import { parse } from "../src/RangerParser";
-import { T, S, I, E, B, Bl, A, iterator } from "../src/NodeIterator";
+import { T, S, I, E, B, Bl, A, iterator, D } from "../src/NodeIterator";
 
 // Token matching
 const IF_THEN_ELSE = [T("if"), E, Bl, T("else"), Bl];
@@ -21,6 +21,9 @@ const XML_CLOSE_TAG_OPEN = [T("<"), T("/"), T()];
 
 const MATCH_PLUSPLUS = [T(), T("+"), T("+")];
 const SEMICOLON = [T(";")];
+
+const MATCH_FRAGMENT = [T("fragment"), Bl];
+const MATCH_ANY_FRAGMENT = [T(), Bl];
 
 // const iter = new CodeNodeIterator(p.rootNode.children);
 describe("Test node iterators", () => {
@@ -327,6 +330,60 @@ else {
     const iter = iterator(parse(`;`));
     expect(iter.m(SEMICOLON, ([iter, int]) => {})).to.be.true;
   });
+  test("Parse an integer", () => {
+    const iter = iterator(parse(`333`));
+    expect(
+      iter.m([I], ([iter, int]) => {
+        const [n] = iter.peek(1);
+        expect(n.int_value).to.equal(333);
+      })
+    ).to.be.true;
+  });
+  test("Parse a double", () => {
+    const iter = iterator(parse(`4.55`));
+    expect(
+      iter.m([D], ([iter, int]) => {
+        const [n] = iter.peek(1);
+        expect(n.double_value).to.equal(4.55);
+      })
+    ).to.be.true;
+  });
+  test("Parse a string, single quotes", () => {
+    const iter = iterator(parse(`'hello'`));
+    expect(
+      iter.m([S()], ([iter, int]) => {
+        const [n] = iter.peek(1);
+        expect(n.string_value).to.equal("hello");
+      })
+    ).to.be.true;
+  });
+  test("Parse a string, double quotes", () => {
+    const iter = iterator(parse(`"hello"`));
+    expect(
+      iter.m([S()], ([iter, int]) => {
+        const [n] = iter.peek(1);
+        expect(n.string_value).to.equal("hello");
+      })
+    ).to.be.true;
+  });
+  test("Parse a string, using `", () => {
+    const iter = iterator(parse("`hello`"));
+    expect(
+      iter.m([S()], ([iter, int]) => {
+        const [n] = iter.peek(1);
+        expect(n.string_value).to.equal("hello");
+      })
+    ).to.be.true;
+  });
+  test("Escaped string values`", () => {
+    const iter = iterator(parse(`"\t"`));
+    expect(
+      iter.m([S()], ([iter, int]) => {
+        const [n] = iter.peek(1);
+        expect(n.string_value).to.equal("\t");
+      })
+    ).to.be.true;
+  });
   test("test matching aa,bb,cc", () => {
     const iter = iterator(parse(`aa,bb,cc`));
     expect(
@@ -344,5 +401,50 @@ else {
     expect(
       iter.m([T("aa"), T(","), T("bb"), T(","), T("cc")], ([iter, int]) => {})
     ).to.be.true;
+  });
+  test("test matching a specific fragment block", () => {
+    const iter = iterator(
+      parse(`
+fragment {
+  something
+}    
+    `)
+    );
+    let value = "";
+    expect(
+      iter.m(MATCH_FRAGMENT, ([iter, int]) => {
+        const [, frag] = iter.peek(2);
+        const it = iterator(frag);
+        expect(
+          it.m([T("something")], ([it]) => {
+            value = it.toTokenString();
+          })
+        ).to.be.true;
+      })
+    ).to.be.true;
+    expect(value).to.equal("something");
+  });
+  test("test matching any kind of fragment block", () => {
+    const iter = iterator(
+      parse(`
+do {
+  something
+}    
+    `)
+    );
+    let value = "";
+    expect(
+      iter.m(MATCH_ANY_FRAGMENT, ([iter, int]) => {
+        const [t, frag] = iter.peek(2);
+        const it = iterator(frag);
+        expect(t.vref).to.equal("do");
+        expect(
+          it.m([T("something")], ([it]) => {
+            value = it.toTokenString();
+          })
+        ).to.be.true;
+      })
+    ).to.be.true;
+    expect(value).to.equal("something");
   });
 });

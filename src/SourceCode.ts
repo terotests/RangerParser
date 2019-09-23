@@ -10,6 +10,9 @@ export class SourceCode {
     this.lines = code_str.split("\n");
   }
   getLineString(line_index: number): string {
+    if (line_index < 0) {
+      return "";
+    }
     if (this.lines.length > line_index) {
       return this.lines[line_index];
     }

@@ -1,6 +1,6 @@
 import { RangerParser } from "./RangerParser";
-import { CodeNode } from './CodeNode'
-import { RangerType } from './RangerType'
+import { CodeNode } from "./CodeNode";
+import { RangerType } from "./RangerType";
 
 type BoolOrUndef = boolean | undefined;
 const EMPTY_ARRAY: [] = [];
@@ -75,7 +75,7 @@ export const isDouble = (
 ): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].double_value === RangerType.Double) {
+    if (n[0].value_type === RangerType.Double) {
       return [i, 1];
     }
   }
@@ -395,39 +395,37 @@ export class CodeNodeIterator {
 
   peek(cnt: number = 1): CodeNode[] {
     let x = 0;
-    const startI = this.i;
-    const startC = this.c;
+    let i = this.i;
+    let c = this.c;
     const res: CodeNode[] = new Array(cnt);
     while (x < cnt) {
-      const n = this.node[this.i];
+      const n = this.node[i];
       if (!n) {
         break;
       }
       if (!n.is_block_node && !n.expression) {
         res[x] = n;
         x++;
-        this.c = 0;
-        this.i++;
+        c = 0;
+        i++;
         continue;
       }
       if (n.is_block_node || (n.expression && n.children.length === 0)) {
         res[x] = n;
         x++;
-        this.c = 0;
-        this.i++;
+        c = 0;
+        i++;
         continue;
       }
-      if (n.children.length === this.c) {
-        this.c = 0;
-        this.i++;
+      if (n.children.length === c) {
+        c = 0;
+        i++;
         continue;
       }
-      res[x] = n.children[this.c];
-      this.c++;
+      res[x] = n.children[c];
+      c++;
       x++;
     }
-    this.i = startI;
-    this.c = startC;
     if (typeof res[0] === "undefined") {
       return EMPTY_ARRAY;
     }

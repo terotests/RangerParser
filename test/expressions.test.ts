@@ -133,10 +133,8 @@ describe("Testing parsing short expressions", () => {
     expect(root.children.length, "Should have four children").to.equal(4);
   });
 
-  test(
-    "Individual multiblock lines with multiple connected blocks are separate ",
-    () => {
-      const root = parse(`
+  test("Individual multiblock lines with multiple connected blocks are separate ", () => {
+    const root = parse(`
       if {
 
       } else {
@@ -158,9 +156,8 @@ describe("Testing parsing short expressions", () => {
 
       }
       `);
-      expect(root.children.length, "Should have four children").to.equal(4);
-    }
-  );
+    expect(root.children.length, "Should have four children").to.equal(4);
+  });
 
   test("Test block starting after newlines", () => {
     const root = parse(`

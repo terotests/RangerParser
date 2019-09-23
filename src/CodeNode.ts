@@ -16,13 +16,7 @@ export class CodeNode {
   mutable_def: boolean;
   expression: boolean;
   vref: string;
-  infix_operator: boolean;
-  infix_node: CodeNode;
-  infix_subnode: boolean;
   is_block_node: boolean;
-  operator_pred: number;
-  to_the_right: boolean;
-  right_node: CodeNode;
   type_type: string;
   type_name: string;
   key_type: string;
