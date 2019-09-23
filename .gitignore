@@ -1,0 +1,21 @@
+
+# Dependency directories
+node_modules/
+
+# folder files
+data_folder/
+
+# do not add compiled code 
+dist/
+
+# Image files
+*.jpg
+*.png
+
+# MacOS
+.DS_Store
+.idea/
+
+# TypeScript compiled .map files
+*.map  
+  
