@@ -4,12 +4,10 @@ export class CodeNode {
   code: SourceCode;
   sp: number;
   ep: number;
-  row: number;
-  col: number;
+  value_type: number;
   expression: boolean;
   vref: string;
   is_block_node: boolean;
-  value_type: number;
   double_value: number;
   string_value: string;
   int_value: number;
