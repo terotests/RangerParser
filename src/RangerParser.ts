@@ -128,6 +128,8 @@ export class RangerParser {
         return 14;
       case 44:
         return 12;
+      case 46:
+        return 12;
       case 43:
         return 13;
       case 37:
@@ -225,7 +227,6 @@ export class RangerParser {
           const ep = this.i;
           const new_ref_node: CodeNode = new CodeNode(this.code, sp, ep);
           new_ref_node.vref = s.substring(sp, ep);
-          new_ref_node.ns = [new_ref_node.vref];
           new_ref_node.parsed_type = 11;
           new_ref_node.value_type = 11;
           new_ref_node.parent = this.curr_node;
@@ -444,11 +445,6 @@ export class RangerParser {
             last_was_newline = true;
             break;
           }
-          if (c == 46) {
-            ns_list.push(s.substring(last_ns, this.i));
-            last_ns = this.i + 1;
-            ns_cnt = 1 + ns_cnt;
-          }
         }
         ep = this.i;
         if (vref_had_type_ann) {
@@ -471,7 +467,6 @@ export class RangerParser {
           new_vref_node.vref = s.substring(sp, ep);
           new_vref_node.parsed_type = 11;
           new_vref_node.value_type = 11;
-          new_vref_node.ns = ns_list;
           new_vref_node.parent = this.curr_node;
           s;
           let pTarget: CodeNode = this.curr_node;

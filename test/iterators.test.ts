@@ -158,6 +158,30 @@ else {
       .to.be.true;
   });
 
+  test("Match dot . operator using foo.bar()", () => {
+    expect(
+      iterator(`foo.bar()`).m(
+        [T("foo"), T("."), T("bar"), E],
+        ([foo, dot, bar]) => {
+          expect(foo.vref()).to.equal("foo");
+          expect(dot.vref()).to.equal(".");
+          expect(bar.vref()).to.equal("bar");
+        }
+      )
+    ).to.be.true;
+  });
+  test("multiline foo.bar()", () => {
+    expect(
+      iterator(`
+      foo
+      .bar()`).m([T("foo"), T("."), T("bar"), E], ([foo, dot, bar]) => {
+        expect(foo.vref()).to.equal("foo");
+        expect(dot.vref()).to.equal(".");
+        expect(bar.vref()).to.equal("bar");
+      })
+    ).to.be.true;
+  });
+
   test("Match arrow function", () => {
     const root = parse(`
     ()
@@ -288,10 +312,27 @@ else {
       )
     ).to.be.true;
   });
-  test("Sequence 1", () => {
+  test("Sequence, two tokens", () => {
     expect(
       iterator(`create table`).m([Sequence(T("create"), T("table"))], ([t]) => {
         expect(t.vref()).to.equal("create");
+      })
+    ).to.be.true;
+  });
+  test("Sequence, token and expression", () => {
+    expect(
+      iterator(`create ()`).m([Sequence(T("create"), E)], ([t]) => {
+        expect(t.vref()).to.equal("create");
+      })
+    ).to.be.true;
+  });
+  test("Sequence, int, string, token, expression", () => {
+    expect(
+      iterator(`3 "foo" * ()`).m([Sequence(I, S(), T(), E)], ([seq]) => {
+        const [n, s, t] = seq.peek(3);
+        expect(n.int_value).to.equal(3);
+        expect(s.string_value).to.equal("foo");
+        expect(t.vref).to.equal("*");
       })
     ).to.be.true;
   });
@@ -384,6 +425,17 @@ else {
         }
       )
     ).to.be.true;
+  });
+  test("OneOf, test matching string in the middle (Failure)", () => {
+    expect(
+      iterator(`create "cc" users`).m(
+        [T("create"), OneOf(S("aa"), S("bb"), S("foobar")), T()],
+        ([, o, varname]) => {
+          expect(o.string()).to.equal("foobar");
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.false;
   });
   test("match create table with subexpressions", () => {
     const iter = iterator(
@@ -638,5 +690,14 @@ do {
       })
     ).to.be.true;
     expect(value).to.equal("something");
+  });
+
+  test("test iterateUntil", () => {
+    const iter = iterator(`a b c d 10.5 f g`);
+    iter.iterateUntil(iter => {
+      return iter.test([T()]);
+    });
+    const [n] = iter.peek(1);
+    expect(n.double_value).to.equal(10.5);
   });
 });

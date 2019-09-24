@@ -15,18 +15,6 @@ export const iterator = (rootNode: CodeNode | string) => {
   return new CodeNodeIterator(rootNode.children);
 };
 
-export const SyntaxError = (str?: string) => (i: CodeNodeIterator) => {
-  const peek = i.peek();
-  const msg = `Syntax error at ${
-    peek[0] ? peek[0].getPositionalString() : "End of file"
-  }  
-  ${str || ""}
-  Token ${peek[0] ? peek[0].vref : "not known"}
-  `;
-  console.error(msg);
-  throw msg;
-};
-
 export const Optional = (fn: MatchFnSignature) => (
   i: CodeNodeIterator
 ): [CodeNodeIterator, number] | [] => {
@@ -280,54 +268,11 @@ export class CodeNodeIterator {
     return this.match(tests, fn);
   }
 
-  match1<T1>(
-    test: (i: CodeNodeIterator) => [T1] | [],
-    fn: (values: [T1]) => void
+  test(
+    tests: Array<MatchFnSignature>,
+    fn?: (values: CodeNodeIterator[]) => void
   ) {
-    const value = test(this);
-    if (value.length === 1) {
-      fn(value);
-      this.take(1);
-    }
-  }
-  // match2(I.IsNumber)
-  // match2(I.IsText('ALL'))
-  match2<T1, T2>(
-    t1: (i: CodeNodeIterator) => [T1] | [],
-    t2: (i: CodeNodeIterator) => [T2] | [],
-    fn: (values: [T1, T2]) => void
-  ) {
-    const c = this.clone();
-    const v1 = t1(c);
-    c.skip(1);
-    const v2 = t2(c);
-    if (v1.length === 1 && v2.length === 1) {
-      fn([v1[0], v2[0]]);
-      this.take(2);
-    }
-  }
-
-  match3<T1, T2, T3>(
-    t1: (i: CodeNodeIterator) => [T1] | [],
-    t2: (i: CodeNodeIterator) => [T2] | [],
-    t3: (i: CodeNodeIterator) => [T3] | [],
-    fn: (values: [T1, T2, T3]) => void
-  ) {
-    const c = this.clone();
-    const v1 = t1(c);
-    c.skip(1);
-    const v2 = t2(c);
-    c.skip(1);
-    const v3 = t3(c);
-    if (v1.length === 1 && v2.length === 1 && v3.length === 1) {
-      fn([v1[0], v2[0], v3[0]]);
-      this.take(3);
-    }
-  }
-
-  nextIs(s: string): boolean {
-    let n = this.peek();
-    return n[0] && n[0].vref.toLowerCase() === s.toLowerCase();
+    return this.clone().match(tests, fn);
   }
 
   toString(): string {
@@ -341,10 +286,6 @@ export class CodeNodeIterator {
   toDouble(): number {
     let n = this.peek();
     return n[0] ? n[0].double_value : 0;
-  }
-  toBool(): boolean {
-    let n = this.peek();
-    return n[0] ? n[0].boolean_value : false;
   }
   toTokenString(): string {
     let n = this.peek();
@@ -408,9 +349,6 @@ export class CodeNodeIterator {
       }
       if (n.value_type === RangerType.Int) {
         return `${n.int_value}`;
-      }
-      if (n.value_type === RangerType.Bool) {
-        return `${n.boolean_value}`;
       }
       if (n.value_type === RangerType.Double) {
         return `${n.double_value}`;
