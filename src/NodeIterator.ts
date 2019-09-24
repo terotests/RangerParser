@@ -1,11 +1,17 @@
-import { RangerParser } from "./RangerParser";
+import { RangerParser, parse } from "./RangerParser";
 import { CodeNode } from "./CodeNode";
 import { RangerType } from "./RangerType";
 
 type BoolOrUndef = boolean | undefined;
 const EMPTY_ARRAY: [] = [];
 
-export const iterator = (rootNode: CodeNode) => {
+type MatchFnResult = [CodeNodeIterator, number] | [];
+type MatchFnSignature = (i: CodeNodeIterator) => MatchFnResult;
+
+export const iterator = (rootNode: CodeNode | string) => {
+  if (typeof rootNode === "string") {
+    return new CodeNodeIterator(parse(rootNode).children);
+  }
   return new CodeNodeIterator(rootNode.children);
 };
 
@@ -19,6 +25,54 @@ export const SyntaxError = (str?: string) => (i: CodeNodeIterator) => {
   `;
   console.error(msg);
   throw msg;
+};
+
+export const Optional = (fn: MatchFnSignature) => (
+  i: CodeNodeIterator
+): [CodeNodeIterator, number] | [] => {
+  const res = fn(i);
+  if (res.length === 0) {
+    return [EMPTY_ITERATOR, 0];
+  }
+  return res;
+};
+
+export const OneOf = (...fns: MatchFnSignature[]) => (
+  i: CodeNodeIterator
+): [CodeNodeIterator, number] | [] => {
+  for (let x = 0; x < fns.length; x++) {
+    const fn = fns[x];
+    const res = fn(i);
+    if (res.length > 0) {
+      return res;
+    }
+  }
+  return EMPTY_ARRAY;
+};
+
+export const Sequence = (...fns: MatchFnSignature[]) => (
+  i: CodeNodeIterator
+): [CodeNodeIterator, number] | [] => {
+  let first: MatchFnResult | undefined;
+  let totalCnt = 0;
+  const iter = i.clone();
+  for (let x = 0; x < fns.length; x++) {
+    const fn = fns[x];
+    const res = fn(iter);
+    if (res.length === 0) {
+      return EMPTY_ARRAY;
+    }
+    if (!first) {
+      const [it] = res;
+      first = [it.clone(), res[1]];
+    }
+    totalCnt += res[1];
+    iter.take(res[1]);
+  }
+  if (!first) {
+    return EMPTY_ARRAY;
+  }
+  return [first[0], totalCnt];
 };
 
 export const Expr = str => (
@@ -103,9 +157,9 @@ export const isExpression = (
   const n = i.peek();
   if (n.length > 0) {
     if (n[0].expression) {
-      const cn = new CodeNode(n[0].code, n[0].sp, n[0].ep);
-      cn.children = n[0].children;
-      return [new CodeNodeIterator([cn]), 1];
+      // const cn = new CodeNode(n[0].code, n[0].sp, n[0].ep);
+      // cn.children = n[0].children;
+      return [new CodeNodeIterator(n[0].children), 1];
     }
   }
   return EMPTY_ARRAY;
@@ -181,6 +235,7 @@ export const IsToken = (str?: string | string[], ignoreCase?: boolean) => (
 };
 
 export const T = IsToken;
+export const Ti = (str?: string | string[]) => IsToken(str, true);
 
 export class CodeNodeIterator {
   i = 0;
@@ -209,7 +264,7 @@ export class CodeNodeIterator {
       const [it, cnt] = test(cc);
       root.take(cnt);
       total += cnt;
-      if (cnt) {
+      if (typeof cnt !== "undefined") {
         res.push(it);
       } else {
         return false;
@@ -221,10 +276,7 @@ export class CodeNodeIterator {
     return true;
   }
 
-  m(
-    tests: Array<(i: CodeNodeIterator) => [CodeNodeIterator, number] | []>,
-    fn?: (values: CodeNodeIterator[]) => void
-  ) {
+  m(tests: Array<MatchFnSignature>, fn?: (values: CodeNodeIterator[]) => void) {
     return this.match(tests, fn);
   }
 
@@ -297,6 +349,22 @@ export class CodeNodeIterator {
   toTokenString(): string {
     let n = this.peek();
     return n[0] ? n[0].vref : "";
+  }
+  vref(): string {
+    let n = this.peek();
+    return n[0] ? n[0].vref : "";
+  }
+  string(): string {
+    let n = this.peek();
+    return n[0] ? n[0].string_value : "";
+  }
+  int(): number {
+    let n = this.peek();
+    return n[0] ? n[0].int_value : 0;
+  }
+  double(): number {
+    let n = this.peek();
+    return n[0] ? n[0].double_value : 0;
   }
 
   toNextLine() {
@@ -454,6 +522,10 @@ export class CodeNodeIterator {
     return did;
   }
 
+  whileDidProceed(fn: (iter: CodeNodeIterator) => void) {
+    this.iterateUntil(iter => this.didProceed(fn));
+  }
+
   peekUntil(fn: (n: CodeNode[]) => boolean): CodeNode[] {
     const startI = this.i;
     const startC = this.c;
@@ -586,3 +658,5 @@ export class CodeNodeIterator {
     return found;
   }
 }
+
+export const EMPTY_ITERATOR = new CodeNodeIterator([]);

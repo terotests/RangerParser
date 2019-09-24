@@ -2,7 +2,22 @@ import { HelloWorld } from "../src/index";
 import { expect } from "chai";
 
 import { parse } from "../src/RangerParser";
-import { T, S, I, E, B, Bl, A, iterator, D } from "../src/NodeIterator";
+import {
+  T,
+  S,
+  I,
+  E,
+  B,
+  Bl,
+  A,
+  iterator,
+  D,
+  CodeNodeIterator,
+  Optional,
+  OneOf,
+  Sequence,
+  Ti
+} from "../src/NodeIterator";
 
 // Token matching
 const IF_THEN_ELSE = [T("if"), E, Bl, T("else"), Bl];
@@ -232,6 +247,185 @@ else {
       })
     ).to.be.true;
   });
+  test("Optional, test matching optional", () => {
+    const iter = iterator(
+      parse(`
+    create table if exists users
+    `)
+    );
+    expect(
+      iter.m(
+        [
+          T("create"),
+          T("table"),
+          Optional(T("if")),
+          Optional(T("exists")),
+          T()
+        ],
+        ([, , i, e, varname]) => {
+          expect(i.vref()).to.equal("if");
+          expect(e.vref()).to.equal("exists");
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.true;
+  });
+  test("Optional, test non matching optional", () => {
+    expect(
+      iterator(`create table users`).m(
+        [
+          T("create"),
+          T("table"),
+          Optional(T("if")),
+          Optional(T("exists")),
+          T()
+        ],
+        ([, , i, e, varname]) => {
+          expect(i.vref()).to.equal("");
+          expect(e.vref()).to.equal("");
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.true;
+  });
+  test("Sequence 1", () => {
+    expect(
+      iterator(`create table`).m([Sequence(T("create"), T("table"))], ([t]) => {
+        expect(t.vref()).to.equal("create");
+      })
+    ).to.be.true;
+  });
+  test("Sequence, no match", () => {
+    expect(
+      iterator(`create tablez`).m(
+        [Sequence(T("create"), T("table"))],
+        ([t]) => {
+          expect(t.vref()).to.equal("create");
+        }
+      )
+    ).to.be.false;
+  });
+  test("Optional Sequence", () => {
+    expect(
+      iterator(`create table if exists users`).m(
+        [
+          T("create"),
+          T("table"),
+          Optional(Sequence(T("if"), T("exists"))),
+          T()
+        ],
+        ([, , ie, varname]) => {
+          expect(ie.vref()).to.equal("if");
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.true;
+  });
+  test("Optional Sequence, Case Insensitive", () => {
+    expect(
+      iterator(`CREATE TABLE IF EXISTS users`).m(
+        [
+          Ti("create"),
+          Ti("table"),
+          Optional(Sequence(Ti("if"), Ti("exists"))),
+          T()
+        ],
+        ([, , ie, varname]) => {
+          expect(ie.vref()).to.equal("IF");
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.true;
+  });
+  test("Optional Sequence, no match", () => {
+    expect(
+      iterator(`create table users`).m(
+        [
+          T("create"),
+          T("table"),
+          Optional(Sequence(T("if"), T("exists"))),
+          T()
+        ],
+        ([, , ie, varname]) => {
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.true;
+  });
+  test("OneOf, test matching last", () => {
+    expect(
+      iterator(`create index users`).m(
+        [T("create"), OneOf(T("table"), T("index")), T()],
+        ([, o, varname]) => {
+          expect(o.vref()).to.equal("index");
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.true;
+  });
+  test("OneOf, test matching first", () => {
+    expect(
+      iterator(`create table users`).m(
+        [T("create"), OneOf(T("table"), T("index")), T()],
+        ([, o, varname]) => {
+          expect(o.vref()).to.equal("table");
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.true;
+  });
+  test("OneOf, test matching string in the middle", () => {
+    expect(
+      iterator(`create "foobar" users`).m(
+        [T("create"), OneOf(S("aa"), S("bb"), S("foobar")), T()],
+        ([, o, varname]) => {
+          expect(o.string()).to.equal("foobar");
+          expect(varname.vref()).to.equal("users");
+        }
+      )
+    ).to.be.true;
+  });
+  test("match create table with subexpressions", () => {
+    const iter = iterator(
+      parse(`
+    CREATE TABLE users (
+      id bigint;
+      name varchar;
+    );
+    CREATE TABLE orders (
+      id bigint
+      name varchar
+    );
+    `)
+    );
+
+    let tableCount = 0;
+    const consumeSemiColon = (iter: CodeNodeIterator) => iter.m([T(";")]);
+    const consumeTable = (iter: CodeNodeIterator) => {
+      // optional matches ??
+      iter.m([T("CREATE"), T("TABLE"), T(), E], ([, , name, it]) => {
+        tableCount++;
+        let fieldCount = 0;
+        it.whileDidProceed(iter => {
+          iter.m([T(), T("bigint")], ([name]) => {
+            expect(name.toTokenString()).to.equal("id");
+            fieldCount++;
+          });
+          iter.m([T(), T("varchar")], ([name]) => {
+            expect(name.toTokenString()).to.equal(`name`);
+            fieldCount++;
+          });
+          consumeSemiColon(iter);
+        });
+        expect(fieldCount).to.be.greaterThan(1);
+      });
+    };
+    iter.whileDidProceed(iter => {
+      consumeTable(iter);
+      consumeSemiColon(iter);
+    });
+    expect(tableCount).to.equal(2);
+  });
   test("match object literal", () => {
     const iter = iterator(
       parse(`
@@ -412,9 +606,7 @@ fragment {
     );
     let value = "";
     expect(
-      iter.m(MATCH_FRAGMENT, ([iter, int]) => {
-        const [, frag] = iter.peek(2);
-        const it = iterator(frag);
+      iter.m(MATCH_FRAGMENT, ([f, it]) => {
         expect(
           it.m([T("something")], ([it]) => {
             value = it.toTokenString();
