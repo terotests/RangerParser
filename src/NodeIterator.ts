@@ -328,7 +328,11 @@ export class CodeNodeIterator {
     this.c = 0;
   }
 
-  skip(s: string | number): boolean {
+  skip(s: string | number | undefined): boolean {
+    if (typeof s === "undefined") {
+      this.take(1);
+      return true;
+    }
     if (typeof s === "number") {
       this.take(s);
       return true;
@@ -438,14 +442,6 @@ export class CodeNodeIterator {
     return res;
   }
 
-  takeUntil(fn: (n: CodeNode[]) => boolean): CodeNode[] {
-    const res: CodeNode[] = [];
-    while (this.peek().length > 0 && fn(this.peek())) {
-      res.push(this.take().pop());
-    }
-    return res;
-  }
-
   didProceed(
     fn: (iter: CodeNodeIterator) => void,
     errorHandler?: (iter: CodeNodeIterator) => void
@@ -462,62 +458,6 @@ export class CodeNodeIterator {
 
   whileDidProceed(fn: (iter: CodeNodeIterator) => void) {
     this.iterateUntil(iter => this.didProceed(fn));
-  }
-
-  peekUntil(fn: (n: CodeNode[]) => boolean): CodeNode[] {
-    const startI = this.i;
-    const startC = this.c;
-
-    const res = this.takeUntil(fn);
-
-    this.i = startI;
-    this.c = startC;
-    return res;
-  }
-
-  iterateUntilToken(
-    token: string | string[],
-    fn: (iter: CodeNodeIterator) => boolean
-  ) {
-    let lastPos: CodeNode[] = [];
-    if (Array.isArray(token)) {
-      while (fn(this)) {
-        const next = this.peek();
-        if (next[0] === lastPos[0]) {
-          if (next.length === 1) {
-            this.skip(1);
-            continue;
-          }
-          return;
-        }
-        if (next.length > 0) {
-          const n = next[0];
-          for (let i = 0; i < token.length; i++) {
-            if (n[0] && n[0].vref.toLowerCase() === token[i].toLowerCase()) {
-              return;
-            }
-          }
-        }
-        lastPos = next;
-      }
-      return;
-    }
-    while (fn(this)) {
-      const next = this.peek();
-      if (next[0] === lastPos[0]) {
-        if (next.length === 1) {
-          this.skip(1);
-          continue;
-        }
-        return;
-      }
-      if (next.length > 0) {
-        const n = next[0];
-        if (n[0] && n[0].vref.toLowerCase() === token.toLowerCase()) {
-          return;
-        }
-      }
-    }
   }
 
   atEnd(): boolean {
@@ -556,44 +496,6 @@ export class CodeNodeIterator {
       last_i = this.i;
       last_c = this.c;
     }
-  }
-
-  takeUntilToken(token: string | string[]) {
-    if (Array.isArray(token)) {
-      return this.takeUntil(n => {
-        for (let i = 0; i < token.length; i++) {
-          if (n[0] && n[0].vref.toLowerCase() === token[i].toLowerCase()) {
-            return false;
-          }
-        }
-        return true;
-      });
-    }
-    return this.takeUntil(n => {
-      console.log("takeUnti", n[0] ? n[0].vref : "");
-      if (n[0] && n[0].vref.toLowerCase() === token.toLowerCase()) {
-        console.log("**** FOUND ");
-        return false;
-      }
-      return true;
-    });
-  }
-
-  hasToken(token: string, delimiters: string[]) {
-    let found = false;
-    const rows = this.peekUntil(n => {
-      for (let i = 0; i < delimiters.length; i++) {
-        if (n[0] && n[0].vref.toLowerCase() === delimiters[i].toLowerCase()) {
-          return false;
-        }
-      }
-      if (n[0] && n[0].vref.toLowerCase() === token.toLowerCase()) {
-        found = true;
-        return false;
-      }
-      return true;
-    });
-    return found;
   }
 }
 

@@ -700,4 +700,8 @@ do {
     const [n] = iter.peek(1);
     expect(n.double_value).to.equal(10.5);
   });
+  test("test firstToString", () => {
+    const iter = iterator(`aa bb cc`);
+    expect(iter.firstToString()).to.equal("aa");
+  });
 });
