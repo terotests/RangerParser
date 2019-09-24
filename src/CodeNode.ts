@@ -9,11 +9,6 @@ export class CodeNode {
   expression: boolean;
   vref: string;
   is_block_node: boolean;
-  has_vref_annotation: boolean;
-  vref_annotation: CodeNode;
-  has_type_annotation: boolean;
-  type_annotation: CodeNode;
-  parsed_type: number;
   value_type: number;
   double_value: number;
   string_value: string;

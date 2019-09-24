@@ -139,35 +139,17 @@ export class RangerParser {
       case 59:
         return 10;
       case 60:
-        if (c2 == 61) {
-          return 11;
-        }
         return 11;
       case 62:
-        if (c2 == 61) {
-          return 11;
-        }
         return 11;
       case 33:
-        if (c2 == 61) {
-          return 10;
-        }
-        return 0;
+        return 3;
       case 61:
-        if (c2 == 61) {
-          return 10;
-        }
         return 3;
       case 38:
-        if (c2 == 38) {
-          return 6;
-        }
-        return 0;
+        return 3;
       case 124:
-        if (c2 == 124) {
-          return 5;
-        }
-        return 0;
+        return 5;
       default:
         break;
     }
@@ -189,14 +171,6 @@ export class RangerParser {
     let had_lf: boolean = false;
     let disable_ops_set: boolean = disable_ops;
     while (this.i < this.__len) {
-      if (typeof this.curr_node !== "undefined" && this.curr_node != null) {
-        if (this.curr_node.value_type == 21) {
-          return;
-        }
-        if (this.curr_node.value_type == 19) {
-          return;
-        }
-      }
       last_i = this.i;
       let is_block_parent: boolean = false;
       if (had_lf) {
@@ -227,7 +201,6 @@ export class RangerParser {
           const ep = this.i;
           const new_ref_node: CodeNode = new CodeNode(this.code, sp, ep);
           new_ref_node.vref = s.substring(sp, ep);
-          new_ref_node.parsed_type = 11;
           new_ref_node.value_type = 11;
           new_ref_node.parent = this.curr_node;
           this.curr_node.children.push(new_ref_node);
@@ -292,13 +265,11 @@ export class RangerParser {
           ep = this.i;
           const new_num_node: CodeNode = new CodeNode(this.code, sp, ep);
           if (is_double) {
-            new_num_node.parsed_type = 2;
             new_num_node.value_type = 2;
             new_num_node.double_value = isNaN(parseFloat(s.substring(sp, ep)))
               ? undefined
               : parseFloat(s.substring(sp, ep));
           } else {
-            new_num_node.parsed_type = 3;
             new_num_node.value_type = 3;
             new_num_node.int_value = isNaN(parseInt(s.substring(sp, ep)))
               ? undefined
@@ -382,7 +353,6 @@ export class RangerParser {
             } else {
             }
             const new_str_node: CodeNode = new CodeNode(this.code, sp, ep);
-            new_str_node.parsed_type = 4;
             new_str_node.value_type = 4;
             if (must_encode) {
               new_str_node.string_value = encoded_str;
@@ -394,12 +364,6 @@ export class RangerParser {
             continue;
           }
         }
-        let ns_list: Array<string> = [];
-        let last_ns: number = this.i;
-        let ns_cnt: number = 1;
-        let vref_had_type_ann: boolean = false;
-        let vref_ann_node: CodeNode;
-        let vref_end: number = this.i;
 
         // this is how we used to handle adding first expression inside the
         // block node
@@ -447,10 +411,6 @@ export class RangerParser {
           }
         }
         ep = this.i;
-        if (vref_had_type_ann) {
-          ep = vref_end;
-        }
-        ns_list.push(s.substring(last_ns, ep));
         c = s.charCodeAt(this.i);
         while (this.i < this.__len && c <= 32 && false == last_was_newline) {
           this.i = 1 + this.i;
@@ -465,16 +425,11 @@ export class RangerParser {
         if (this.i <= this.__len && ep > sp) {
           const new_vref_node: CodeNode = new CodeNode(this.code, sp, ep);
           new_vref_node.vref = s.substring(sp, ep);
-          new_vref_node.parsed_type = 11;
           new_vref_node.value_type = 11;
           new_vref_node.parent = this.curr_node;
           s;
           let pTarget: CodeNode = this.curr_node;
           pTarget.children.push(new_vref_node);
-          if (vref_had_type_ann) {
-            new_vref_node.vref_annotation = vref_ann_node;
-            new_vref_node.has_vref_annotation = true;
-          }
           continue;
         }
 
