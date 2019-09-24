@@ -5,6 +5,9 @@ node_modules/
 # folder files
 data_folder/
 
+# code coverage directory
+coverage/
+
 # do not add compiled code 
 dist/
 
