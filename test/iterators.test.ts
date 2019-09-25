@@ -42,6 +42,33 @@ const MATCH_ANY_FRAGMENT = [T(), Bl];
 
 // const iter = new CodeNodeIterator(p.rootNode.children);
 describe("Test node iterators", () => {
+  test("Documentation example", () => {
+    const IF_THEN_ELSE = [T("if"), E, Bl, T("else"), Bl];
+
+    // then lets create the iterator
+    const iter = iterator(
+      parse(`
+    if( x + y ) {
+    
+    } else {
+    
+    }`)
+    );
+    let didMatch = false;
+    // and try matching it
+    iter.match(IF_THEN_ELSE, ([, // iterator for if statement, not needed
+      condition, block, , elseBlock]) => {
+      // iterator for condition // iterator for matched block // else token not needed // block for else
+      // and here you can continue examining the condition, block or elseBlock
+      const [x, plus, y] = condition.peek(3);
+      expect(x.token).to.equal("x"); // x
+      expect(plus.token).to.equal("+"); // +
+      expect(y.token).to.equal("y"); // y
+      didMatch = true;
+    });
+    expect(didMatch).to.be.true;
+  });
+
   test("Token with numbers", () => {
     expect(
       iterator(`a12345`).m([T()], ([t]) => {
