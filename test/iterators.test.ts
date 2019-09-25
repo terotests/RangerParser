@@ -151,16 +151,16 @@ else {
         `);
     const ch1 = root.children[0];
     const ch2 = root.children[1];
-    expect(ch1.expression, "to be expression").to.be.true;
-    expect(ch2.is_block_node, "to be a block").to.be.true;
+    expect(ch1.isExpression, "to be .isExpression").to.be.true;
+    expect(ch2.isBlock, "to be a block").to.be.true;
 
     expect(ch1.children.length, "four children").to.equal(4);
     expect(ch2.children.length, "one children").to.equal(1);
 
     // The problem seems to be there that the sequence is
-    // expression -> if () {} else
+    // .isExpression -> if () {} else
     // block -> {}
-    // and not expression -> {}
+    // and not .isExpression -> {}
   });
 
   test("if then else, test 3", () => {
@@ -382,19 +382,19 @@ else {
       })
     ).to.be.true;
   });
-  test("Sequence, token and expression", () => {
+  test("Sequence, token and .isExpression", () => {
     expect(
       iterator(`create ()`).m([Sequence(T("create"), E)], ([t]) => {
         expect(t.token()).to.equal("create");
       })
     ).to.be.true;
   });
-  test("Sequence, int, string, token, expression", () => {
+  test("Sequence, int, string, token, .isExpression", () => {
     expect(
       iterator(`3 "foo" * ()`).m([Sequence(I, S(), T(), E)], ([seq]) => {
         const [n, s, t] = seq.peek(3);
-        expect(n.int_value).to.equal(3);
-        expect(s.string_value).to.equal("foo");
+        expect(n.intValue).to.equal(3);
+        expect(s.stringValue).to.equal("foo");
         expect(t.token).to.equal("*");
       })
     ).to.be.true;
@@ -500,7 +500,7 @@ else {
       )
     ).to.be.false;
   });
-  test("match create table with subexpressions", () => {
+  test("match create table with sub.isExpressions", () => {
     const iter = iterator(
       parse(`
     CREATE TABLE users (
@@ -644,7 +644,7 @@ else {
     expect(
       iter.m([I], ([iter, int]) => {
         const [n] = iter.peek(1);
-        expect(n.int_value).to.equal(333);
+        expect(n.intValue).to.equal(333);
       })
     ).to.be.true;
   });
@@ -660,7 +660,7 @@ else {
     expect(
       iter.m([S()], ([iter, int]) => {
         const [n] = iter.peek(1);
-        expect(n.string_value).to.equal("hello");
+        expect(n.stringValue).to.equal("hello");
       })
     ).to.be.true;
   });
@@ -669,7 +669,7 @@ else {
     expect(
       iter.m([S()], ([iter, int]) => {
         const [n] = iter.peek(1);
-        expect(n.string_value).to.equal("hello");
+        expect(n.stringValue).to.equal("hello");
       })
     ).to.be.true;
   });
@@ -678,7 +678,7 @@ else {
     expect(
       iter.m([S()], ([iter, int]) => {
         const [n] = iter.peek(1);
-        expect(n.string_value).to.equal("hello");
+        expect(n.stringValue).to.equal("hello");
       })
     ).to.be.true;
   });
@@ -687,7 +687,7 @@ else {
     expect(
       iter.m([S()], ([iter, int]) => {
         const [n] = iter.peek(1);
-        expect(n.string_value).to.equal("\t");
+        expect(n.stringValue).to.equal("\t");
       })
     ).to.be.true;
   });
@@ -759,7 +759,7 @@ do {
       return iter.test([T()]);
     });
     const [n] = iter.peek(1);
-    expect(n.double_value).to.equal(10.5);
+    expect(n.doubleValue).to.equal(10.5);
   });
   test("test firstToString", () => {
     const iter = iterator(`aa bb cc`);

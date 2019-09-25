@@ -4,13 +4,13 @@ export class CodeNode {
   code: SourceCode;
   sp: number;
   ep: number;
-  value_type: number;
-  expression: boolean;
+  nodeType: number;
+  isExpression: boolean;
+  isBlock: boolean;
   token: string;
-  is_block_node: boolean;
-  double_value: number;
-  string_value: string;
-  int_value: number;
+  doubleValue: number;
+  stringValue: string;
+  intValue: number;
   children: Array<CodeNode> = [];
   parent: CodeNode;
 

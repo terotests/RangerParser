@@ -68,7 +68,7 @@ export const Expr = str => (
 ): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].expression) {
+    if (n[0].isExpression) {
       const cn = new CodeNode(n[0].code, n[0].sp, n[0].ep);
       cn.children = n[0].children;
       const first = cn.children[0];
@@ -83,7 +83,7 @@ export const Expr = str => (
 export const isInt = (i: CodeNodeIterator): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].value_type === RangerType.Int) {
+    if (n[0].nodeType === RangerType.Int) {
       return [i, 1];
     }
   }
@@ -95,7 +95,7 @@ export const I = isInt;
 export const IsInt = (i: CodeNodeIterator): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].value_type === RangerType.Int) {
+    if (n[0].nodeType === RangerType.Int) {
       return [i, 1];
     }
   }
@@ -117,7 +117,7 @@ export const isDouble = (
 ): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].value_type === RangerType.Double) {
+    if (n[0].nodeType === RangerType.Double) {
       return [i, 1];
     }
   }
@@ -131,7 +131,7 @@ export const IsBlock = (
 ): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].is_block_node) {
+    if (n[0].isBlock) {
       return [new CodeNodeIterator(n[0].children), 1];
     }
   }
@@ -144,7 +144,7 @@ export const isExpression = (
 ): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].expression) {
+    if (n[0].isExpression) {
       // const cn = new CodeNode(n[0].code, n[0].sp, n[0].ep);
       // cn.children = n[0].children;
       return [new CodeNodeIterator(n[0].children), 1];
@@ -159,7 +159,7 @@ export const IsBool = (
 ): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].value_type === RangerType.Bool) {
+    if (n[0].nodeType === RangerType.Bool) {
       return [i, 1];
     }
   }
@@ -172,11 +172,11 @@ export const IsString = (str?) => (
 ): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].value_type === RangerType.String) {
+    if (n[0].nodeType === RangerType.String) {
       if (typeof str === "undefined") {
         return [i, 1];
       }
-      if (n[0].string_value === str) {
+      if (n[0].stringValue === str) {
         return [i, 1];
       }
     }
@@ -190,7 +190,7 @@ export const IsToken = (str?: string | string[], ignoreCase?: boolean) => (
 ): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
-    if (n[0].value_type === RangerType.Token) {
+    if (n[0].nodeType === RangerType.Token) {
       if (typeof str === "undefined") {
         return [i, 1];
       }
@@ -277,15 +277,15 @@ export class CodeNodeIterator {
 
   toString(): string {
     let n = this.peek();
-    return n[0] ? n[0].string_value : "";
+    return n[0] ? n[0].stringValue : "";
   }
   toInt(): number {
     let n = this.peek();
-    return n[0] ? n[0].int_value : 0;
+    return n[0] ? n[0].intValue : 0;
   }
   toDouble(): number {
     let n = this.peek();
-    return n[0] ? n[0].double_value : 0;
+    return n[0] ? n[0].doubleValue : 0;
   }
   toTokenString(): string {
     let n = this.peek();
@@ -297,15 +297,15 @@ export class CodeNodeIterator {
   }
   string(): string {
     let n = this.peek();
-    return n[0] ? n[0].string_value : "";
+    return n[0] ? n[0].stringValue : "";
   }
   int(): number {
     let n = this.peek();
-    return n[0] ? n[0].int_value : 0;
+    return n[0] ? n[0].intValue : 0;
   }
   double(): number {
     let n = this.peek();
-    return n[0] ? n[0].double_value : 0;
+    return n[0] ? n[0].doubleValue : 0;
   }
 
   toNextLine() {
@@ -348,16 +348,16 @@ export class CodeNodeIterator {
   firstToString(): string {
     const [n] = this.peek();
     if (n) {
-      if (n.value_type === RangerType.String) {
-        return `"${n.string_value}"`;
+      if (n.nodeType === RangerType.String) {
+        return `"${n.stringValue}"`;
       }
-      if (n.value_type === RangerType.Int) {
-        return `${n.int_value}`;
+      if (n.nodeType === RangerType.Int) {
+        return `${n.intValue}`;
       }
-      if (n.value_type === RangerType.Double) {
-        return `${n.double_value}`;
+      if (n.nodeType === RangerType.Double) {
+        return `${n.doubleValue}`;
       }
-      if (n.value_type === RangerType.Token) {
+      if (n.nodeType === RangerType.Token) {
         return `${n.token}`;
       }
       return "";
@@ -374,14 +374,14 @@ export class CodeNodeIterator {
       if (!n) {
         break;
       }
-      if (!n.is_block_node && !n.expression) {
+      if (!n.isBlock && !n.isExpression) {
         res.push(n);
         x++;
         this.c = 0;
         this.i++;
         continue;
       }
-      if (n.is_block_node || (n.expression && n.children.length === 0)) {
+      if (n.isBlock || (n.isExpression && n.children.length === 0)) {
         res.push(n);
         x++;
         this.c = 0;
@@ -413,14 +413,14 @@ export class CodeNodeIterator {
       if (!n) {
         break;
       }
-      if (!n.is_block_node && !n.expression) {
+      if (!n.isBlock && !n.isExpression) {
         res[x] = n;
         x++;
         c = 0;
         i++;
         continue;
       }
-      if (n.is_block_node || (n.expression && n.children.length === 0)) {
+      if (n.isBlock || (n.isExpression && n.children.length === 0)) {
         res[x] = n;
         x++;
         c = 0;

@@ -5,7 +5,7 @@ import { T, S, I, E, B, Bl, A, iterator } from "../src/NodeIterator";
 describe("Testing parsing short expressions", () => {
   test("Empty string should be a block node", () => {
     const p = parse("");
-    expect(p.is_block_node).to.be.true;
+    expect(p.isBlock).to.be.true;
   });
   test("Testing block node parsing", () => {
     const root = parse(`{
@@ -16,7 +16,7 @@ describe("Testing parsing short expressions", () => {
 
     }
     `);
-    expect(root.is_block_node, "root should be a block node").to.be.true;
+    expect(root.isBlock, "root should be a block node").to.be.true;
 
     // first child of the root block should be a block
     const p = root.children[0];
@@ -91,7 +91,7 @@ describe("Testing parsing short expressions", () => {
     `);
     expect(root.children.length, "Should have four children").to.equal(4);
     root.children.forEach(ch => {
-      expect(ch.expression).to.be.true;
+      expect(ch.isExpression).to.be.true;
     });
   });
 

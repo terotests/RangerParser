@@ -20,30 +20,26 @@ export class RangerParser {
   buff: string;
   __len: number;
   i: number;
-  last_line_start: number;
   current_line_index: number;
   parents: Array<CodeNode>;
   next: CodeNode;
   paren_cnt: number;
-  get_op_pred: number;
   rootNode: CodeNode;
   curr_node: CodeNode;
   disableOperators: boolean;
   constructor(code_module: SourceCode) {
     this.__len = 0;
     this.i = 0;
-    this.last_line_start = 0; /** note: unused */
     this.current_line_index = 0;
     this.parents = [];
     this.paren_cnt = 0;
-    this.get_op_pred = 0; /** note: unused */
     this.disableOperators = false;
     this.buff = code_module.code;
     this.code = code_module;
     this.__len = this.buff.length;
-    this.rootNode = new CodeNode(this.code, 0, 0);
-    this.rootNode.is_block_node = true;
-    this.rootNode.expression = true;
+    this.rootNode = new CodeNode(this.code, 0, this.buff.length);
+    this.rootNode.isBlock = true;
+    this.rootNode.isExpression = true;
     this.curr_node = this.rootNode;
     this.parents.push(this.curr_node);
     this.paren_cnt = 1;
@@ -162,8 +158,6 @@ export class RangerParser {
   parse(disable_ops: boolean): void {
     const s: string = this.buff;
     let c: number = s.charCodeAt(0);
-    /** unused:  const next_c : number  = 0   **/
-
     let fc: number = 0;
     let sp: number = 0;
     let ep: number = 0;
@@ -184,7 +178,7 @@ export class RangerParser {
           this.curr_node.parent != null
         ) {
           const nodeParent: CodeNode = this.curr_node.parent;
-          if (nodeParent.is_block_node) {
+          if (nodeParent.isBlock) {
             is_block_parent = true;
           }
         }
@@ -204,7 +198,7 @@ export class RangerParser {
             if (typeof this.curr_node === "undefined") {
               this.rootNode = new CodeNode(this.code, this.i, this.i);
               this.curr_node = this.rootNode;
-              this.curr_node.expression = true;
+              this.curr_node.isExpression = true;
               this.parents.push(this.curr_node);
             } else {
               const new_qnode: CodeNode = new CodeNode(
@@ -212,13 +206,13 @@ export class RangerParser {
                 this.i,
                 this.i
               );
-              new_qnode.expression = true;
+              new_qnode.isExpression = true;
               this.insert_node(new_qnode);
               this.parents.push(new_qnode);
               this.curr_node = new_qnode;
             }
             if (c == 123) {
-              this.curr_node.is_block_node = true;
+              this.curr_node.isBlock = true;
             }
             this.i = 1 + this.i;
             this.parse(disable_ops_set);
@@ -279,13 +273,13 @@ export class RangerParser {
           ep = this.i;
           const new_num_node: CodeNode = new CodeNode(this.code, sp, ep);
           if (is_double) {
-            new_num_node.value_type = 2;
-            new_num_node.double_value = isNaN(parseFloat(s.substring(sp, ep)))
+            new_num_node.nodeType = 2;
+            new_num_node.doubleValue = isNaN(parseFloat(s.substring(sp, ep)))
               ? undefined
               : parseFloat(s.substring(sp, ep));
           } else {
-            new_num_node.value_type = 3;
-            new_num_node.int_value = isNaN(parseInt(s.substring(sp, ep)))
+            new_num_node.nodeType = 3;
+            new_num_node.intValue = isNaN(parseInt(s.substring(sp, ep)))
               ? undefined
               : parseInt(s.substring(sp, ep));
           }
@@ -299,7 +293,7 @@ export class RangerParser {
           const ep = this.i;
           const new_ref_node: CodeNode = new CodeNode(this.code, sp, ep);
           new_ref_node.token = s.substring(sp, ep);
-          new_ref_node.value_type = 11;
+          new_ref_node.nodeType = 11;
           new_ref_node.parent = this.curr_node;
           this.curr_node.children.push(new_ref_node);
           continue;
@@ -380,11 +374,11 @@ export class RangerParser {
             } else {
             }
             const new_str_node: CodeNode = new CodeNode(this.code, sp, ep);
-            new_str_node.value_type = 4;
+            new_str_node.nodeType = 4;
             if (must_encode) {
-              new_str_node.string_value = encoded_str;
+              new_str_node.stringValue = encoded_str;
             } else {
-              new_str_node.string_value = s.substring(sp, ep);
+              new_str_node.stringValue = s.substring(sp, ep);
             }
             this.insert_node(new_str_node);
             this.i = 1 + this.i;
@@ -402,10 +396,10 @@ export class RangerParser {
           c != 41 &&
           c != 125
         ) {
-          if (this.curr_node.is_block_node == true) {
+          if (this.curr_node.isBlock == true) {
             const new_expr_node: CodeNode = new CodeNode(this.code, sp, ep);
             new_expr_node.parent = this.curr_node;
-            new_expr_node.expression = true;
+            new_expr_node.isExpression = true;
             this.curr_node.children.push(new_expr_node);
             this.curr_node = new_expr_node;
             this.parents.push(new_expr_node);
@@ -452,9 +446,8 @@ export class RangerParser {
         if (this.i <= this.__len && ep > sp) {
           const new_token_node: CodeNode = new CodeNode(this.code, sp, ep);
           new_token_node.token = s.substring(sp, ep);
-          new_token_node.value_type = 11;
+          new_token_node.nodeType = 11;
           new_token_node.parent = this.curr_node;
-          s;
           let pTarget: CodeNode = this.curr_node;
           pTarget.children.push(new_token_node);
           continue;
