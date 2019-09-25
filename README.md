@@ -66,28 +66,31 @@ structure like this
 Code example
 
 ```typescript
-import { T, E, Bl, iterator } from "ranger-parser";
-test("Documentation example", () => {
-  const IF_THEN_ELSE = [T("if"), E, Bl, T("else"), Bl];
-  const iter = iterator(
-    parse(`
+import { T, E, Bl, iterator, parse } from "ranger-parser";
+
+describe("Jest test example", () => {
+  test("Documentation example", () => {
+    const IF_THEN_ELSE = [T("if"), E, Bl, T("else"), Bl];
+    const iter = iterator(
+      parse(`
   if( x + y ) {
   
   } else {
   
   }`)
-  );
-  let didMatch = false;
-  iter.match(IF_THEN_ELSE, ([, condition, block, , elseBlock]) => {
-    // if we have match, this callback is called an iterator moves forward
-    const [x, plus, y] = condition.peek(3);
-    expect(x.token).to.equal("x");
-    expect(plus.token).to.equal("+");
-    expect(y.token).to.equal("y");
-    didMatch = true;
+    );
+    let didMatch = false;
+    iter.match(IF_THEN_ELSE, ([, condition, block, , elseBlock]) => {
+      // if we have match, this callback is called an iterator moves forward
+      const [x, plus, y] = condition.peek(3);
+      expect(x.token).to.equal("x");
+      expect(plus.token).to.equal("+");
+      expect(y.token).to.equal("y");
+      didMatch = true;
+    });
+    // .... the iterator has now consumed the if sentence and is ready to consume more data
+    expect(didMatch).to.be.true;
   });
-  // .... the iterator has now consumed the if sentence and is ready to consume more data
-  expect(didMatch).to.be.true;
 });
 ```
 

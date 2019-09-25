@@ -1,8 +1,9 @@
 {
   "name": "ranger-parser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Language Agnostic DSL parser",
-  "main": "NodeIterator.js",
+  "main": "dist/src/NodeIterator.js",
+  "types": "dist/src/NodeIterator.d.ts",
   "scripts": {
     "tsc": "tsc",
     "oldtest": "npm run tsc && ./node_modules/.bin/mocha dist/test/ --recursive --reporter spec",
