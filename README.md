@@ -56,7 +56,8 @@ if (x + y) {
 }
 ```
 
-You can create a definintion like
+You can create a definition which will match the `if`, `expression` `block` `else` `block`
+structure like this
 
 ```typescript
 [T("if"), E, Bl, T("else"), Bl];
