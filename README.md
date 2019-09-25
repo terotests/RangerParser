@@ -10,10 +10,9 @@ So how is that possible? The trick is that parse supports some common language e
 out of the box
 
 ```typescript
-{ // 1. curly brackets {} are parsed into block nodes. Actually, empty file is invisble block
-  // which does not contain any expressions
+{ // 1. curly brackets {} are parsed into block nodes. Actually, empty file is invisible block
 
-  if // 2. all simple texts are parsed as tokens inside expressions
+  if // 2. all tokens are parsed into expression lists
 
   if () // 3. all parenthesis () are parsed as expression nodes
 
@@ -24,6 +23,8 @@ out of the box
   `hello`
 }
 ```
+
+Newlines inside a block will start a new expression, but iterators ignore that.
 
 Surprisingly, those simple rules are just enough to transform most common language syntaxes into AST tree
 which can be used as a basis of a language or configuration files.
@@ -80,6 +81,7 @@ test("Documentation example", () => {
     expect(y.token).to.equal("y");
     didMatch = true;
   });
+  // .... the iterator has now consumed the if sentence and is ready to consume more data
   expect(didMatch).to.be.true;
 });
 ```
@@ -122,10 +124,13 @@ export class CodeNode {
 Iterators have some defined matchers to match against common types like
 
 ```typescript
-iterator(`1234`).m([IsInt()], ([t]) => {
-  expect(t.int()).to.equal("1234");
+iterator(`1234`).m([IsInt()], ([num]) => {
+  // num.int() should now equal 1234
 });
 ```
+
+Each call to `iter.match()` will return boolean indicating whether the iterator did match or not.
+The callback will have all matched positions filled with corresponding iterators. In case of match the iterator will consume the matched positions.
 
 Here is a list of defined trivial matchers
 
