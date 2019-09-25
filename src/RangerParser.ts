@@ -240,9 +240,6 @@ export class RangerParser {
           this.i = 1 + this.i;
           c = s.charCodeAt(this.i);
           let expCnt = 0;
-          if (is_double) {
-            console.log("Matching . starting");
-          }
           while (
             this.i < this.__len &&
             ((c >= 48 && c <= 57) ||
@@ -371,7 +368,6 @@ export class RangerParser {
                   ii = ii + 1;
                 }
               }
-            } else {
             }
             const new_str_node: CodeNode = new CodeNode(this.code, sp, ep);
             new_str_node.nodeType = 4;
