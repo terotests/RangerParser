@@ -72,12 +72,12 @@ test("Documentation example", () => {
   }`)
   );
   let didMatch = false;
-  iter.match(IF_THEN_ELSE, ([, // iterator for if statement, not needed
-    condition, block, , elseBlock]) => {
+  iter.match(IF_THEN_ELSE, ([, condition, block, , elseBlock]) => {
+    // if we have match, this callback is called an iterator moves forward
     const [x, plus, y] = condition.peek(3);
-    expect(x.token).to.equal("x"); // x
-    expect(plus.token).to.equal("+"); // +
-    expect(y.token).to.equal("y"); // y
+    expect(x.token).to.equal("x");
+    expect(plus.token).to.equal("+");
+    expect(y.token).to.equal("y");
     didMatch = true;
   });
   expect(didMatch).to.be.true;
