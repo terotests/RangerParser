@@ -170,7 +170,7 @@ Keywords could be optionally separated from operators to support better control 
 
 Comments in the syntax is not supported.
 
-# Code Coverate
+# Test Coverage
 
 Still needs some work to get to the 100%
 
