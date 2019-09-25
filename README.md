@@ -51,17 +51,21 @@ The parser has two basic components:
 For example, to match simple `if` statement like this
 
 ```typescript
-if() {
-
+if (x + y) {
 } else {
-
 }
 ```
 
-Here is example matching `if() {} else {}` and tokens inside the if condition
+You can create a definintion like
 
 ```typescript
-import { T, E, Bl } from "ranger-parser";
+[T("if"), E, Bl, T("else"), Bl];
+```
+
+Code example
+
+```typescript
+import { T, E, Bl, iterator } from "ranger-parser";
 test("Documentation example", () => {
   const IF_THEN_ELSE = [T("if"), E, Bl, T("else"), Bl];
   const iter = iterator(
