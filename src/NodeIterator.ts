@@ -72,7 +72,7 @@ export const Expr = str => (
       const cn = new CodeNode(n[0].code, n[0].sp, n[0].ep);
       cn.children = n[0].children;
       const first = cn.children[0];
-      if (first && first.vref === str) {
+      if (first && first.token === str) {
         return [new CodeNodeIterator([cn]), 1];
       }
     }
@@ -197,22 +197,22 @@ export const IsToken = (str?: string | string[], ignoreCase?: boolean) => (
       if (Array.isArray(str)) {
         for (const s of str) {
           if (ignoreCase) {
-            if (n[0].vref.toLowerCase() === s.toLowerCase()) {
+            if (n[0].token.toLowerCase() === s.toLowerCase()) {
               return [i, 1];
             }
           } else {
-            if (n[0].vref === s) {
+            if (n[0].token === s) {
               return [i, 1];
             }
           }
         }
       } else {
         if (ignoreCase) {
-          if (n[0].vref.toLowerCase() === str.toLowerCase()) {
+          if (n[0].token.toLowerCase() === str.toLowerCase()) {
             return [i, 1];
           }
         } else {
-          if (n[0].vref === str) {
+          if (n[0].token === str) {
             return [i, 1];
           }
         }
@@ -289,11 +289,11 @@ export class CodeNodeIterator {
   }
   toTokenString(): string {
     let n = this.peek();
-    return n[0] ? n[0].vref : "";
+    return n[0] ? n[0].token : "";
   }
-  vref(): string {
+  token(): string {
     let n = this.peek();
-    return n[0] ? n[0].vref : "";
+    return n[0] ? n[0].token : "";
   }
   string(): string {
     let n = this.peek();
@@ -338,7 +338,7 @@ export class CodeNodeIterator {
       return true;
     }
     let n = this.peek();
-    if (n[0] && n[0].vref.toLowerCase() === s.toLowerCase()) {
+    if (n[0] && n[0].token.toLowerCase() === s.toLowerCase()) {
       this.take();
       return true;
     }
@@ -358,7 +358,7 @@ export class CodeNodeIterator {
         return `${n.double_value}`;
       }
       if (n.value_type === RangerType.Token) {
-        return `${n.vref}`;
+        return `${n.token}`;
       }
       return "";
     }

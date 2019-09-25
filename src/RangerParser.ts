@@ -195,18 +195,6 @@ export class RangerParser {
       had_lf = false;
       c = s.charCodeAt(this.i);
       if (this.i < this.__len) {
-        if (this.isOperator(false)) {
-          const sp = this.i;
-          this.i++;
-          const ep = this.i;
-          const new_ref_node: CodeNode = new CodeNode(this.code, sp, ep);
-          new_ref_node.vref = s.substring(sp, ep);
-          new_ref_node.value_type = 11;
-          new_ref_node.parent = this.curr_node;
-          this.curr_node.children.push(new_ref_node);
-          continue;
-        }
-
         c = s.charCodeAt(this.i);
         if (this.i < this.__len - 1) {
           fc = s.charCodeAt(this.i + 1);
@@ -241,21 +229,47 @@ export class RangerParser {
         ep = this.i;
         fc = s.charCodeAt(this.i);
         if (
-          (fc == 45 &&
-            s.charCodeAt(this.i + 1) >= 46 &&
+          // -123 or .123
+          ((fc == 45 || fc == 46) &&
+            s.charCodeAt(this.i + 1) >= 48 &&
             s.charCodeAt(this.i + 1) <= 57) ||
+          // -.333
+          (fc == 45 &&
+            s.charCodeAt(this.i + 1) === 46 &&
+            s.charCodeAt(this.i + 2) >= 48 &&
+            s.charCodeAt(this.i + 2) <= 57) ||
+          // normal start as number
           (fc >= 48 && fc <= 57)
         ) {
-          let is_double: boolean = false;
+          let is_double: boolean = fc === 46;
           sp = this.i;
           this.i = 1 + this.i;
           c = s.charCodeAt(this.i);
+          let expCnt = 0;
+          if (is_double) {
+            console.log("Matching . starting");
+          }
           while (
             this.i < this.__len &&
             ((c >= 48 && c <= 57) ||
               c == 46 ||
+              (expCnt === 0 && c == 101) ||
               (this.i == sp && (c == 43 || c == 45)))
           ) {
+            // 101 e
+            // 45  -
+            // 43  +
+            if (c == 101) {
+              const c2 = s.charCodeAt(this.i + 1);
+              if (c2 == 45 || c2 == 43) {
+                is_double = true;
+                this.i = this.i + 2;
+                c = s.charCodeAt(this.i);
+                expCnt++;
+                continue;
+              }
+            }
+
             if (c == 46) {
               is_double = true;
             }
@@ -278,6 +292,19 @@ export class RangerParser {
           this.insert_node(new_num_node);
           continue;
         }
+
+        if (this.isOperator(false)) {
+          const sp = this.i;
+          this.i++;
+          const ep = this.i;
+          const new_ref_node: CodeNode = new CodeNode(this.code, sp, ep);
+          new_ref_node.token = s.substring(sp, ep);
+          new_ref_node.value_type = 11;
+          new_ref_node.parent = this.curr_node;
+          this.curr_node.children.push(new_ref_node);
+          continue;
+        }
+
         const str_limit: number = fc;
         const b_had_str: boolean = fc == 34 || fc == 96 || fc == 39;
         if (b_had_str) {
@@ -423,13 +450,13 @@ export class RangerParser {
           }
         }
         if (this.i <= this.__len && ep > sp) {
-          const new_vref_node: CodeNode = new CodeNode(this.code, sp, ep);
-          new_vref_node.vref = s.substring(sp, ep);
-          new_vref_node.value_type = 11;
-          new_vref_node.parent = this.curr_node;
+          const new_token_node: CodeNode = new CodeNode(this.code, sp, ep);
+          new_token_node.token = s.substring(sp, ep);
+          new_token_node.value_type = 11;
+          new_token_node.parent = this.curr_node;
           s;
           let pTarget: CodeNode = this.curr_node;
-          pTarget.children.push(new_vref_node);
+          pTarget.children.push(new_token_node);
           continue;
         }
 

@@ -6,7 +6,7 @@ export class CodeNode {
   ep: number;
   value_type: number;
   expression: boolean;
-  vref: string;
+  token: string;
   is_block_node: boolean;
   double_value: number;
   string_value: string;

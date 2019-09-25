@@ -39,6 +39,72 @@ const MATCH_ANY_FRAGMENT = [T(), Bl];
 
 // const iter = new CodeNodeIterator(p.rootNode.children);
 describe("Test node iterators", () => {
+  test("Token with numbers", () => {
+    expect(
+      iterator(`a12345`).m([T()], ([t]) => {
+        expect(t.token()).to.equal("a12345");
+      })
+    ).to.be.true;
+  });
+  test("Separation of ajacent tokens and numbers", () => {
+    expect(
+      iterator(`a12345*55`).m([T(), T(), I], ([t, m, n]) => {
+        expect(t.token()).to.equal("a12345");
+        expect(m.token()).to.equal("*");
+        expect(n.int()).to.equal(55);
+      })
+    ).to.be.true;
+  });
+  test("Double and adjacent token and int", () => {
+    expect(
+      iterator(`1.2344*55`).m([D, T(), I], ([t, m, n]) => {
+        expect(t.double()).to.equal(1.2344);
+        expect(m.token()).to.equal("*");
+        expect(n.int()).to.equal(55);
+      })
+    ).to.be.true;
+  });
+  test("Double .4", () => {
+    expect(
+      iterator(`.4`).m([D], ([t]) => {
+        expect(t.double()).to.equal(0.4);
+      })
+    ).to.be.true;
+  });
+  test("Double -.4", () => {
+    expect(
+      iterator(`-.4`).m([D], ([t]) => {
+        expect(t.double()).to.equal(-0.4);
+      })
+    ).to.be.true;
+  });
+
+  test("Double with exponent", () => {
+    expect(
+      iterator(`1.23e-5`).m([D], ([t]) => {
+        expect(t.double()).to.equal(1.23e-5);
+      })
+    ).to.be.true;
+  });
+
+  test("Double with exponent, second e is not matched into double", () => {
+    expect(
+      iterator(`1.23e-5e`).m([D, T()], ([t, t2]) => {
+        expect(t.double()).to.equal(1.23e-5);
+        expect(t2.token()).to.equal("e");
+      })
+    ).to.be.true;
+  });
+  test("Double with exponent, postfixed and prefixed with e", () => {
+    expect(
+      iterator(`e 1.23e-5e`).m([T(), D, T()], ([e, t, t2]) => {
+        expect(t.double()).to.equal(1.23e-5);
+        expect(t2.token()).to.equal("e");
+        expect(e.token()).to.equal("e");
+      })
+    ).to.be.true;
+  });
+
   test("if then else, test 1", () => {
     const iter = iterator(
       parse(`
@@ -160,9 +226,9 @@ else {
       iterator(`foo.bar()`).m(
         [T("foo"), T("."), T("bar"), E],
         ([foo, dot, bar]) => {
-          expect(foo.vref()).to.equal("foo");
-          expect(dot.vref()).to.equal(".");
-          expect(bar.vref()).to.equal("bar");
+          expect(foo.token()).to.equal("foo");
+          expect(dot.token()).to.equal(".");
+          expect(bar.token()).to.equal("bar");
         }
       )
     ).to.be.true;
@@ -172,9 +238,9 @@ else {
       iterator(`
       foo
       .bar()`).m([T("foo"), T("."), T("bar"), E], ([foo, dot, bar]) => {
-        expect(foo.vref()).to.equal("foo");
-        expect(dot.vref()).to.equal(".");
-        expect(bar.vref()).to.equal("bar");
+        expect(foo.token()).to.equal("foo");
+        expect(dot.token()).to.equal(".");
+        expect(bar.token()).to.equal("bar");
       })
     ).to.be.true;
   });
@@ -217,7 +283,7 @@ else {
     expect(
       iter.m(MATCH_CONST_DEF, ([iter, int]) => {
         const [, varname] = iter.peek(2);
-        expect(varname.vref).to.equal("x");
+        expect(varname.token).to.equal("x");
       })
     ).to.be.true;
     // match arrow fucntion definition
@@ -226,7 +292,7 @@ else {
     expect(
       iter.m(MATCH_CONST_DEF, ([iter, int]) => {
         const [, varname] = iter.peek(2);
-        expect(varname.vref).to.equal("xyz");
+        expect(varname.token).to.equal("xyz");
       })
     ).to.be.true;
     // match the second arrow function definition
@@ -235,7 +301,7 @@ else {
     expect(
       iter.m(MATCH_CONST_DEF, ([iter, int]) => {
         const [, varname] = iter.peek(2);
-        expect(varname.vref).to.equal("foo");
+        expect(varname.token).to.equal("foo");
       })
     ).to.be.true;
     // match the second arrow function definition
@@ -251,7 +317,7 @@ else {
     expect(
       iter.m(CREATE_TABLE, ([iter, int]) => {
         const [, , varname] = iter.peek(3);
-        expect(varname.vref).to.equal("users");
+        expect(varname.token).to.equal("users");
       })
     ).to.be.true;
   });
@@ -264,7 +330,7 @@ else {
     expect(
       iter.m(CREATE_TABLE_IC, ([iter, int]) => {
         const [, , varname] = iter.peek(3);
-        expect(varname.vref).to.equal("users");
+        expect(varname.token).to.equal("users");
       })
     ).to.be.true;
   });
@@ -284,9 +350,9 @@ else {
           T()
         ],
         ([, , i, e, varname]) => {
-          expect(i.vref()).to.equal("if");
-          expect(e.vref()).to.equal("exists");
-          expect(varname.vref()).to.equal("users");
+          expect(i.token()).to.equal("if");
+          expect(e.token()).to.equal("exists");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.true;
@@ -302,9 +368,9 @@ else {
           T()
         ],
         ([, , i, e, varname]) => {
-          expect(i.vref()).to.equal("");
-          expect(e.vref()).to.equal("");
-          expect(varname.vref()).to.equal("users");
+          expect(i.token()).to.equal("");
+          expect(e.token()).to.equal("");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.true;
@@ -312,14 +378,14 @@ else {
   test("Sequence, two tokens", () => {
     expect(
       iterator(`create table`).m([Sequence(T("create"), T("table"))], ([t]) => {
-        expect(t.vref()).to.equal("create");
+        expect(t.token()).to.equal("create");
       })
     ).to.be.true;
   });
   test("Sequence, token and expression", () => {
     expect(
       iterator(`create ()`).m([Sequence(T("create"), E)], ([t]) => {
-        expect(t.vref()).to.equal("create");
+        expect(t.token()).to.equal("create");
       })
     ).to.be.true;
   });
@@ -329,7 +395,7 @@ else {
         const [n, s, t] = seq.peek(3);
         expect(n.int_value).to.equal(3);
         expect(s.string_value).to.equal("foo");
-        expect(t.vref).to.equal("*");
+        expect(t.token).to.equal("*");
       })
     ).to.be.true;
   });
@@ -338,7 +404,7 @@ else {
       iterator(`create tablez`).m(
         [Sequence(T("create"), T("table"))],
         ([t]) => {
-          expect(t.vref()).to.equal("create");
+          expect(t.token()).to.equal("create");
         }
       )
     ).to.be.false;
@@ -353,8 +419,8 @@ else {
           T()
         ],
         ([, , ie, varname]) => {
-          expect(ie.vref()).to.equal("if");
-          expect(varname.vref()).to.equal("users");
+          expect(ie.token()).to.equal("if");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.true;
@@ -369,8 +435,8 @@ else {
           T()
         ],
         ([, , ie, varname]) => {
-          expect(ie.vref()).to.equal("IF");
-          expect(varname.vref()).to.equal("users");
+          expect(ie.token()).to.equal("IF");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.true;
@@ -385,7 +451,7 @@ else {
           T()
         ],
         ([, , ie, varname]) => {
-          expect(varname.vref()).to.equal("users");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.true;
@@ -395,8 +461,8 @@ else {
       iterator(`create index users`).m(
         [T("create"), OneOf(T("table"), T("index")), T()],
         ([, o, varname]) => {
-          expect(o.vref()).to.equal("index");
-          expect(varname.vref()).to.equal("users");
+          expect(o.token()).to.equal("index");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.true;
@@ -406,8 +472,8 @@ else {
       iterator(`create table users`).m(
         [T("create"), OneOf(T("table"), T("index")), T()],
         ([, o, varname]) => {
-          expect(o.vref()).to.equal("table");
-          expect(varname.vref()).to.equal("users");
+          expect(o.token()).to.equal("table");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.true;
@@ -418,7 +484,7 @@ else {
         [T("create"), OneOf(S("aa"), S("bb"), S("foobar")), T()],
         ([, o, varname]) => {
           expect(o.string()).to.equal("foobar");
-          expect(varname.vref()).to.equal("users");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.true;
@@ -429,7 +495,7 @@ else {
         [T("create"), OneOf(S("aa"), S("bb"), S("foobar")), T()],
         ([, o, varname]) => {
           expect(o.string()).to.equal("foobar");
-          expect(varname.vref()).to.equal("users");
+          expect(varname.token()).to.equal("users");
         }
       )
     ).to.be.false;
@@ -539,7 +605,7 @@ else {
       iter.m(XML_TAG_OPEN, ([iter, int]) => {
         // first node as string is not parsed properly
         const [, tag] = iter.peek(2);
-        expect(tag.vref).to.equal("div");
+        expect(tag.token).to.equal("div");
       })
     ).to.be.true;
     expect(iter.m(XML_TAG_CLOSE, ([iter, int]) => {})).to.be.true;
@@ -554,7 +620,7 @@ else {
       iter.m(XML_CLOSE_TAG_OPEN, ([iter, int]) => {
         // first node as string is not parsed properly
         const [, , tag] = iter.peek(3);
-        expect(tag.vref).to.equal("div");
+        expect(tag.token).to.equal("div");
       })
     ).to.be.true;
     expect(iter.m(XML_TAG_CLOSE, ([iter, int]) => {})).to.be.true;
@@ -565,7 +631,7 @@ else {
       iter.m(MATCH_PLUSPLUS, ([iter, int]) => {
         // first node as string is not parsed properly
         const [varname, ,] = iter.peek(3);
-        expect(varname.vref).to.equal("i");
+        expect(varname.token).to.equal("i");
       })
     ).to.be.true;
   });
@@ -583,11 +649,9 @@ else {
     ).to.be.true;
   });
   test("Parse a double", () => {
-    const iter = iterator(parse(`4.55`));
     expect(
-      iter.m([D], ([iter, int]) => {
-        const [n] = iter.peek(1);
-        expect(n.double_value).to.equal(4.55);
+      iterator("4.55").m([D], ([d]) => {
+        expect(d.double()).to.equal(4.55);
       })
     ).to.be.true;
   });
@@ -678,7 +742,7 @@ do {
       iter.m(MATCH_ANY_FRAGMENT, ([iter, int]) => {
         const [t, frag] = iter.peek(2);
         const it = iterator(frag);
-        expect(t.vref).to.equal("do");
+        expect(t.token).to.equal("do");
         expect(
           it.m([T("something")], ([it]) => {
             value = it.toTokenString();
