@@ -1,12 +1,15 @@
 import { RangerParser, parse } from "./RangerParser";
 import { CodeNode } from "./CodeNode";
+import { SourceCode } from "./SourceCode";
 import { RangerType } from "./RangerType";
 
 type BoolOrUndef = boolean | undefined;
-const EMPTY_ARRAY: [] = [];
+export const EMPTY_ARRAY: [] = [];
 
-type MatchFnResult = [CodeNodeIterator, number] | [];
-type MatchFnSignature = (i: CodeNodeIterator) => MatchFnResult;
+export type MatchFnResult = [CodeNodeIterator, number] | [] | undefined;
+export type MatchFnSignature = (i: CodeNodeIterator) => MatchFnResult;
+
+export { parse, RangerParser };
 
 export const iterator = (rootNode: CodeNode | string) => {
   if (typeof rootNode === "string") {
@@ -154,19 +157,6 @@ export const isExpression = (
 };
 export const E = isExpression;
 
-export const IsBool = (
-  i: CodeNodeIterator
-): [CodeNodeIterator, number] | [] => {
-  const n = i.peek();
-  if (n.length > 0) {
-    if (n[0].nodeType === RangerType.Bool) {
-      return [i, 1];
-    }
-  }
-  return EMPTY_ARRAY;
-};
-export const B = IsBool;
-
 export const IsString = (str?) => (
   i: CodeNodeIterator
 ): [CodeNodeIterator, number] | [] => {
@@ -246,17 +236,15 @@ export class CodeNodeIterator {
   ): boolean {
     const res: CodeNodeIterator[] = [];
     const root = this.clone();
-    let total = 0;
     for (const test of tests) {
       const cc = root.clone();
-      const [it, cnt] = test(cc);
-      root.take(cnt);
-      total += cnt;
-      if (typeof cnt !== "undefined") {
-        res.push(it);
-      } else {
+      const result = test(cc);
+      if (typeof result === "undefined" || result.length === 0) {
         return false;
       }
+      const [it, cnt] = test(cc);
+      root.take(cnt);
+      res.push(it);
     }
     if (fn) fn(res);
     this.i = root.i;

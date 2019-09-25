@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { parse } from "../src/RangerParser";
-import { T, S, I, E, B, Bl, A, iterator } from "../src/NodeIterator";
 
 describe("Testing parsing short expressions", () => {
   test("Empty string should be a block node", () => {

@@ -1,10 +1,11 @@
 import { SourceCode } from "./SourceCode";
+import { RangerType } from "./RangerType";
 
 export class CodeNode {
   code: SourceCode;
   sp: number;
   ep: number;
-  nodeType: number;
+  nodeType: RangerType;
   isExpression: boolean;
   isBlock: boolean;
   token: string;

@@ -270,12 +270,12 @@ export class RangerParser {
           ep = this.i;
           const new_num_node: CodeNode = new CodeNode(this.code, sp, ep);
           if (is_double) {
-            new_num_node.nodeType = 2;
+            new_num_node.nodeType = RangerType.Double;
             new_num_node.doubleValue = isNaN(parseFloat(s.substring(sp, ep)))
               ? undefined
               : parseFloat(s.substring(sp, ep));
           } else {
-            new_num_node.nodeType = 3;
+            new_num_node.nodeType = RangerType.Int;
             new_num_node.intValue = isNaN(parseInt(s.substring(sp, ep)))
               ? undefined
               : parseInt(s.substring(sp, ep));
@@ -290,7 +290,7 @@ export class RangerParser {
           const ep = this.i;
           const new_ref_node: CodeNode = new CodeNode(this.code, sp, ep);
           new_ref_node.token = s.substring(sp, ep);
-          new_ref_node.nodeType = 11;
+          new_ref_node.nodeType = RangerType.Token;
           new_ref_node.parent = this.curr_node;
           this.curr_node.children.push(new_ref_node);
           continue;
@@ -370,7 +370,7 @@ export class RangerParser {
               }
             }
             const new_str_node: CodeNode = new CodeNode(this.code, sp, ep);
-            new_str_node.nodeType = 4;
+            new_str_node.nodeType = RangerType.String;
             if (must_encode) {
               new_str_node.stringValue = encoded_str;
             } else {
@@ -442,7 +442,7 @@ export class RangerParser {
         if (this.i <= this.__len && ep > sp) {
           const new_token_node: CodeNode = new CodeNode(this.code, sp, ep);
           new_token_node.token = s.substring(sp, ep);
-          new_token_node.nodeType = 11;
+          new_token_node.nodeType = RangerType.Token;
           new_token_node.parent = this.curr_node;
           let pTarget: CodeNode = this.curr_node;
           pTarget.children.push(new_token_node);

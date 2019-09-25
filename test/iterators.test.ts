@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { parse } from "../src/RangerParser";
 import {
+  parse,
   T,
   S,
   I,
@@ -13,7 +13,10 @@ import {
   Optional,
   OneOf,
   Sequence,
-  Ti
+  Ti,
+  EMPTY_ARRAY,
+  EMPTY_ITERATOR,
+  MatchFnSignature
 } from "../src/NodeIterator";
 
 // Token matching
@@ -153,14 +156,8 @@ else {
     const ch2 = root.children[1];
     expect(ch1.isExpression, "to be .isExpression").to.be.true;
     expect(ch2.isBlock, "to be a block").to.be.true;
-
     expect(ch1.children.length, "four children").to.equal(4);
     expect(ch2.children.length, "one children").to.equal(1);
-
-    // The problem seems to be there that the sequence is
-    // .isExpression -> if () {} else
-    // block -> {}
-    // and not .isExpression -> {}
   });
 
   test("if then else, test 3", () => {
@@ -764,5 +761,53 @@ do {
   test("test firstToString", () => {
     const iter = iterator(`aa bb cc`);
     expect(iter.firstToString()).to.equal("aa");
+  });
+
+  test("A bit more complex SQL parsing", () => {
+    const iter = iterator(`
+SELECT AVG(u.age), min(u.age) u.id, p.id, * from 
+  projects.user u,
+  projects.product p
+WHERE
+  u.name like '%glen%'
+AND
+  p.id = 120
+AND
+  p.completed = true`);
+
+    const ASTERISK = [T("*")];
+
+    // create a custom matcher...
+    const matchNotFROM: MatchFnSignature = iter => {
+      if (!iter.m([Ti("from")])) {
+        return [iter, 1];
+      }
+      return EMPTY_ARRAY;
+    };
+    const matchAggregateFn: MatchFnSignature = iter => {
+      const it = iter.clone();
+      if (it.m([Ti("AVG"), E])) {
+        return [iter, 2];
+      }
+      return EMPTY_ARRAY;
+    };
+    let aggrCnt = 0;
+    iter.whileDidProceed(iter => {
+      const SEMICOLON = [T(";")];
+      const PROPERTY_ACCESS = [T(), T("."), T()];
+      const AGGREGATES = Ti(["AVG", "MIN", "MAX"]);
+      if (iter.match([T(["SELECT"])])) {
+        iter.whileDidProceed(i => {
+          i.m([AGGREGATES, E], ([fn, e]) => {
+            // TODO: iterate e
+            aggrCnt++;
+          });
+          i.m([matchNotFROM], ([i]) => {
+            // matches as long as FROM is not encountered
+          });
+        });
+      }
+    });
+    expect(aggrCnt).to.equal(2);
   });
 });

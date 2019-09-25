@@ -1,7 +1,6 @@
 export enum RangerType {
-  Double = 2,
-  Int = 3,
-  String = 4,
-  Bool = 5,
-  Token = 11
+  Double = 1,
+  Int = 2,
+  String = 3,
+  Token = 4
 }
