@@ -66,23 +66,6 @@ export const Sequence = (...fns: MatchFnSignature[]) => (
   return [first[0], totalCnt];
 };
 
-export const Expr = str => (
-  i: CodeNodeIterator
-): [CodeNodeIterator, number] | [] => {
-  const n = i.peek();
-  if (n.length > 0) {
-    if (n[0].isExpression) {
-      const cn = new CodeNode(n[0].code, n[0].sp, n[0].ep);
-      cn.children = n[0].children;
-      const first = cn.children[0];
-      if (first && first.token === str) {
-        return [new CodeNodeIterator([cn]), 1];
-      }
-    }
-  }
-  return EMPTY_ARRAY;
-};
-
 export const isInt = (i: CodeNodeIterator): [CodeNodeIterator, number] | [] => {
   const n = i.peek();
   if (n.length > 0) {
@@ -148,9 +131,9 @@ export const isExpression = (
   const n = i.peek();
   if (n.length > 0) {
     if (n[0].isExpression) {
-      // const cn = new CodeNode(n[0].code, n[0].sp, n[0].ep);
-      // cn.children = n[0].children;
-      return [new CodeNodeIterator(n[0].children), 1];
+      // const blockNode = new CodeNode(n[0].code, n[0].sp, n[0].ep);
+      // blockNode.children = n[0].children;
+      return [new CodeNodeIterator([n[0]]), 1];
     }
   }
   return EMPTY_ARRAY;

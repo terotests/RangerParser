@@ -23,6 +23,7 @@ import {
 describe("SQL parser test", () => {
   test("Tow Sample SQL statements", () => {
     const iter = iterator(`
+select * from purchases, (select * from cat where name like 'abba') jeba;
 SELECT 
     AVG(u.age) as keskiarvo, 
     min(main.user.length) as pituus, 
@@ -31,20 +32,21 @@ SELECT
     * 
 FROM 
   main.user u,
-  main.product p
+  main.product p,
+  (select id, count( xddd ), max(ranges) from foo, bar) f
 WHERE
-  u.name like '%glen%'
-AND
-  p.id = 120
-AND
-  p.completed = true;
+    u.name like '%glen%'
+  AND
+    p.id = 120
+  AND
+    p.completed = true;
 SELECT max(id) from karhu;  
   `);
 
     const ASTERISK = [T("*")];
     let aggrCnt = 0;
 
-    const AGGREGATES = Ti(["AVG", "MIN", "MAX"]);
+    const AGGREGATES = Ti(["AVG", "MIN", "MAX", "count"]);
     const SEMICOLON = [T(";")];
     const COMMA = [T(",")];
     const KEYWORDS = [Ti(["SELECT", "FROM", "WHERE", "ORDER"])];
@@ -129,31 +131,42 @@ SELECT max(id) from karhu;
       }
     };
 
+    const MatchTableAlias = (iter): any => {
+      if (IsEndOfExpr(iter)) return;
+      let alias;
+      iter.m([T()], ([t]) => {
+        alias = t.token();
+      });
+      return alias;
+    };
+
     const MatchTableDef = (iter): any => {
       if (IsEndOfExpr(iter)) return;
       const tabledef = {
         name: "tabledef",
         schema: "",
         full: "",
-        alias: ""
+        alias: "",
+        subquery: undefined
       };
       // <table>.<column> <alias>
+      // subquery start
       if (
-        iter.match([T(), T("."), T(), T()], ([s, , full, short]) => {
-          tabledef.full = full.token();
-          tabledef.alias = short.token();
-          tabledef.schema = s.token();
+        iter.m([E, T()], ([e, t]) => {
+          iff(MatchSELECT(e), sel => (tabledef.subquery = sel));
+          tabledef.alias = t.token();
         })
       ) {
         return tabledef;
       }
-      // <column> <alias>
+
       if (
-        iter.match([T(), T()], ([full, short]) => {
+        iter.match([T(), T("."), T()], ([s, , full]) => {
           tabledef.full = full.token();
-          tabledef.alias = short.token();
+          tabledef.schema = s.token();
         })
       ) {
+        tabledef.alias = MatchTableAlias(iter);
         return tabledef;
       }
       // <column>
@@ -162,6 +175,7 @@ SELECT max(id) from karhu;
           tabledef.full = full.token();
         })
       ) {
+        tabledef.alias = MatchTableAlias(iter);
         return tabledef;
       }
       return undefined;
@@ -187,7 +201,7 @@ SELECT max(id) from karhu;
 
     // will match a select statement
     const MatchSELECT = (iter): any => {
-      if (iter.match([T(["SELECT"])])) {
+      if (iter.match([Ti(["SELECT"])])) {
         const statement = {
           name: "SELECT",
           columns: [],
@@ -212,7 +226,6 @@ SELECT max(id) from karhu;
             }
             iter.m(COMMA);
             iff(MatchTableDef(iter), def => {
-              console.log(def);
               statement.from.push(def);
             });
           });
@@ -225,8 +238,8 @@ SELECT max(id) from karhu;
     iter.whileDidProceed(iter => {
       iff(MatchSELECT(iter), sel => statements.push(sel));
     });
-    expect(aggrCnt).to.equal(3);
-    expect(statements.length).to.equal(2);
+    expect(aggrCnt).to.equal(5);
+    expect(statements.length).to.equal(3);
     console.log(JSON.stringify(statements, null, 2));
   });
 });

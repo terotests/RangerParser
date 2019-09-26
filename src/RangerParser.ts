@@ -194,6 +194,23 @@ export class RangerParser {
           fc = s.charCodeAt(this.i + 1);
           // block or expression start
           if (c == 40 || c == 123) {
+            // if this is the first expression on the row
+            if (this.curr_node.isBlock == true && c == 40) {
+              const rootExpr: CodeNode = new CodeNode(
+                this.code,
+                this.i,
+                this.i
+              );
+              rootExpr.parent = this.curr_node;
+              rootExpr.isExpression = true;
+              this.curr_node.children.push(rootExpr);
+              this.curr_node = rootExpr;
+              this.parents.push(rootExpr);
+              this.paren_cnt = 1 + this.paren_cnt;
+              this.parse(disable_ops_set);
+              continue;
+            }
+
             this.paren_cnt = this.paren_cnt + 1;
             if (typeof this.curr_node === "undefined") {
               this.rootNode = new CodeNode(this.code, this.i, this.i);

@@ -6,6 +6,41 @@ describe("Testing parsing short expressions", () => {
     const p = parse("");
     expect(p.isBlock).to.be.true;
   });
+  test("Test empty expression", () => {
+    const root = parse(`
+(x y)    
+    `);
+    const firstRow = root.children[0];
+    const firstChild = firstRow.children[0];
+    expect(firstRow.isExpression).to.be.true;
+    expect(firstChild.isExpression).to.be.true;
+  });
+  test("Test empty expression after a token", () => {
+    const root = parse(`
+token (x y)    
+    `);
+    const firstRow = root.children[0];
+    const firstChild = firstRow.children[0];
+    const secondChild = firstRow.children[1];
+    expect(firstRow.isExpression).to.be.true;
+    expect(firstChild.token).to.be.not.undefined;
+    expect(secondChild.isExpression).to.be.true;
+  });
+  test("Test empty expression after a token inside expr", () => {
+    const root = parse(`
+SELECT xxx    
+  (token (x y)) 
+    `);
+    const firstRow = root.children[1];
+    const firstExpr = firstRow.children[0];
+    const firstChild = firstExpr.children[0];
+    const secondChild = firstExpr.children[1];
+    expect(firstExpr.isExpression).to.be.true;
+    console.log(firstChild);
+    console.log(root);
+    expect(firstChild.token).to.be.not.undefined;
+    expect(secondChild.isExpression).to.be.true;
+  });
   test("Testing block node parsing", () => {
     const root = parse(`{
       a
@@ -37,9 +72,18 @@ describe("Testing parsing short expressions", () => {
   });
 
   test("Test simple expression", () => {
-    const root = parse(`(a + b)`);
+    const root = parse(`
+    (a + (b))
+    `);
     const first = root.children[0];
-    expect(first.children.length, "Should have three children").to.equal(3);
+    expect(first.children.length, "Should have one child").to.equal(1);
+    const firstExpr = first.children[0];
+    expect(
+      firstExpr.children.length,
+      "Should have three subexpressions"
+    ).to.equal(3);
+    const lastChild = firstExpr.children[2];
+    expect(lastChild.isExpression).to.be.true;
   });
   test("Test simple expression 2", () => {
     const root = parse(`
