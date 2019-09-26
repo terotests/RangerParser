@@ -238,6 +238,10 @@ export class CodeNodeIterator {
     const root = this.clone();
     for (const test of tests) {
       const cc = root.clone();
+      if (typeof test !== "function") {
+        console.log("Test not a function ", test);
+        console.error(cc.peek());
+      }
       const result = test(cc);
       if (typeof result === "undefined" || result.length === 0) {
         return false;

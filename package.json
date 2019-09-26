@@ -1,6 +1,6 @@
 {
   "name": "ranger-parser",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Language Agnostic DSL parser",
   "main": "dist/src/NodeIterator.js",
   "types": "dist/src/NodeIterator.d.ts",
