@@ -23,7 +23,7 @@ import {
 describe("SQL parser test", () => {
   test("Tow Sample SQL statements", () => {
     const iter = iterator(`
-select * from purchases, (select * from cat where name like 'abba') jeba;
+select * from purchases, (select * from cat where name like 'abba') jeba  ;
 SELECT 
     AVG(u.age) as keskiarvo, 
     min(main.user.length) as pituus, 
@@ -33,7 +33,15 @@ SELECT
 FROM 
   main.user u,
   main.product p,
-  (select id, count( xddd ), max(ranges) from foo, bar) f
+  (select 
+      id, 
+      count( xddd ) as cnt, 
+      max(ranges) 
+    from   
+      foo, 
+      bar, 
+      (select * from zed) zed
+   ) fs
 WHERE
     u.name like '%glen%'
   AND

@@ -36,8 +36,6 @@ SELECT xxx
     const firstChild = firstExpr.children[0];
     const secondChild = firstExpr.children[1];
     expect(firstExpr.isExpression).to.be.true;
-    console.log(firstChild);
-    console.log(root);
     expect(firstChild.token).to.be.not.undefined;
     expect(secondChild.isExpression).to.be.true;
   });
