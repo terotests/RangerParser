@@ -8,12 +8,18 @@ import { RangerType } from "./RangerType";
  *
  * @param codeString string to transform
  */
-export const parse = (codeString: string) => {
+export const parse = (codeString: string, options?: ParserSettings) => {
   const sourceFile = new SourceCode(codeString);
-  const parser = new RangerParser(sourceFile);
+  const parser = new RangerParser(sourceFile, options);
   parser.parse(true);
   return parser.rootNode;
 };
+
+export interface ParserSettings {
+  opChars?: string;
+  lineCommentStart?: string;
+  blockComment?: [string, string];
+}
 
 export class RangerParser {
   code: SourceCode;
@@ -27,7 +33,17 @@ export class RangerParser {
   rootNode: CodeNode;
   curr_node: CodeNode;
   disableOperators: boolean;
-  constructor(code_module: SourceCode) {
+
+  defaultOpChars = "[]<>=&|,.-+*/;?%#!$";
+  opDetect: { [key: number]: boolean } = {};
+
+  lineCommentStart = "//";
+  blockComment = [];
+  lineCommentFirstCh = 0;
+  blockCommentFirstCh = 0;
+  blockCommmentLastCh = 0;
+
+  constructor(code_module: SourceCode, settings?: ParserSettings) {
     this.__len = 0;
     this.i = 0;
     this.current_line_index = 0;
@@ -43,6 +59,28 @@ export class RangerParser {
     this.curr_node = this.rootNode;
     this.parents.push(this.curr_node);
     this.paren_cnt = 1;
+    if (settings) {
+      if (settings.opChars) {
+        this.defaultOpChars = settings.opChars;
+      }
+      if (settings.blockComment) {
+        this.blockComment = settings.blockComment;
+      }
+      if (settings.lineCommentStart) {
+        this.lineCommentStart = settings.lineCommentStart;
+      }
+    }
+
+    for (const ch of this.defaultOpChars.split("")) {
+      this.opDetect[ch.charCodeAt(0)] = true;
+    }
+    if (this.lineCommentStart) {
+      this.lineCommentFirstCh = this.lineCommentStart.charCodeAt(0);
+    }
+    if (this.blockComment && this.blockComment.length === 2) {
+      this.blockCommentFirstCh = this.blockComment[0].charCodeAt(0);
+      this.blockCommmentLastCh = this.blockComment[1].charCodeAt(0);
+    }
   }
   skip_space(is_block_parent: boolean): boolean {
     const s: string = this.buff;
@@ -105,51 +143,8 @@ export class RangerParser {
     }
     return true;
   }
-  isOperator(disabled: boolean): number {
-    if (disabled) {
-      return 0;
-    }
-    const s: string = this.buff;
-    if (this.i - 2 > this.__len) {
-      return 0;
-    }
-    const c: number = s.charCodeAt(this.i);
-    const c2: number = s.charCodeAt(this.i + 1);
-    switch (c) {
-      case 91:
-        return 1;
-      case 42:
-        return 1;
-      case 47:
-        return 14;
-      case 44:
-        return 12;
-      case 46:
-        return 12;
-      case 43:
-        return 13;
-      case 37:
-        return 14;
-      case 45:
-        return 13;
-      case 59:
-        return 10;
-      case 60:
-        return 11;
-      case 62:
-        return 11;
-      case 33:
-        return 3;
-      case 61:
-        return 3;
-      case 38:
-        return 3;
-      case 124:
-        return 5;
-      default:
-        break;
-    }
-    return 0;
+  isOperator(): boolean {
+    return this.opDetect[this.buff.charCodeAt(this.i)];
   }
   insert_node(p_node: CodeNode): void {
     let push_target: CodeNode = this.curr_node;
@@ -189,6 +184,58 @@ export class RangerParser {
       had_lf = false;
       c = s.charCodeAt(this.i);
       if (this.i < this.__len) {
+        // test if could be start of line comment
+        if (c === this.lineCommentFirstCh) {
+          let lcs = 1;
+          for (let i = this.i + 1; i < this.lineCommentStart.length + i; i++) {
+            if (s.charCodeAt(i) !== this.lineCommentStart.charCodeAt(lcs)) {
+              break;
+            }
+            lcs++;
+          }
+          if (lcs === this.lineCommentStart.length) {
+            // iterate until end of line
+            while (s.charCodeAt(this.i) !== 10 && s.charCodeAt(this.i) !== 13) {
+              this.i++;
+            }
+            if (this.i >= this.__len) {
+              break;
+            }
+            continue;
+          }
+        }
+        if (c === this.blockCommentFirstCh) {
+          let lcs = 1;
+          const blockStart = this.blockComment[0];
+          const blockEnd = this.blockComment[1];
+          for (let i = this.i + 1; i < blockStart.length + i; i++) {
+            if (s.charCodeAt(i) !== blockStart.charCodeAt(lcs)) {
+              break;
+            }
+            lcs++;
+          }
+          if (lcs === blockStart.length) {
+            // iterate until end of block comment
+            const isBlockEnd = () => {
+              let lcs = 0;
+              for (let i = this.i; i < blockEnd.length + i; i++) {
+                if (s.charCodeAt(i) !== blockEnd.charCodeAt(lcs)) {
+                  return false;
+                }
+                lcs++;
+              }
+              return true;
+            };
+            while (!isBlockEnd() && this.i < this.__len) {
+              this.i++;
+            }
+            if (this.i >= this.__len) {
+              break;
+            }
+            continue;
+          }
+        }
+
         c = s.charCodeAt(this.i);
         if (this.i < this.__len - 1) {
           fc = s.charCodeAt(this.i + 1);
@@ -301,7 +348,7 @@ export class RangerParser {
           continue;
         }
 
-        if (this.isOperator(false)) {
+        if (this.isOperator()) {
           const sp = this.i;
           this.i++;
           const ep = this.i;
@@ -432,8 +479,7 @@ export class RangerParser {
           c != 125
         ) {
           if (this.i > sp) {
-            const is_opchar: number = this.isOperator(false);
-            if (is_opchar > 0) {
+            if (this.isOperator()) {
               break;
             }
           }

@@ -209,4 +209,67 @@ SELECT xxx
     `);
     expect(root.children.length, "Should have two children").to.equal(2);
   });
+
+  test("Test line comments", () => {
+    const root = parse(
+      `
+    a
+    b
+    // c
+    d
+    `,
+      {
+        lineCommentStart: "//"
+      }
+    );
+    expect(root.children.length, "Should have three children").to.equal(3);
+  });
+  test("Test line comments 2", () => {
+    const root = parse(
+      `
+    a
+    b
+    ; c
+    ; d
+    `,
+      {
+        lineCommentStart: ";"
+      }
+    );
+    expect(root.children.length, "Should have two children").to.equal(2);
+  });
+  test("Test block comment", () => {
+    const root = parse(
+      `
+    a
+    b
+    /*
+    c
+    d
+    */
+    `,
+      {
+        lineCommentStart: ";",
+        blockComment: ["/*", "*/"]
+      }
+    );
+    expect(root.children.length, "Should have two children").to.equal(2);
+  });
+  test("Test block comment2", () => {
+    const root = parse(
+      `
+    /*
+    a
+    b
+    c
+    d
+    */
+    `,
+      {
+        lineCommentStart: ";",
+        blockComment: ["/*", "*/"]
+      }
+    );
+    expect(root.children.length, "Should have no children").to.equal(0);
+  });
 });

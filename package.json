@@ -1,6 +1,6 @@
 {
   "name": "ranger-parser",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Language Agnostic DSL parser",
   "main": "dist/src/NodeIterator.js",
   "types": "dist/src/NodeIterator.d.ts",
@@ -14,13 +14,13 @@
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {
+    "@types/chai": "^4.1.4",
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^10.5.6",
     "chai": "^4.1.2",
     "jest": "^24.9.0",
     "mocha": "^5.2.0",
-    "typescript": "^3.0.1",
-    "@types/chai": "^4.1.4",
-    "@types/mocha": "^5.2.5",
-    "@types/node": "^10.5.6"
+    "typescript": "^3.5.0"
   },
   "jest": {
     "verbose": true,

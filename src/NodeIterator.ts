@@ -1,4 +1,4 @@
-import { RangerParser, parse } from "./RangerParser";
+import { RangerParser, parse, ParserSettings } from "./RangerParser";
 import { CodeNode } from "./CodeNode";
 import { SourceCode } from "./SourceCode";
 import { RangerType } from "./RangerType";
@@ -8,12 +8,18 @@ export const EMPTY_ARRAY: [] = [];
 
 export type MatchFnResult = [CodeNodeIterator, number] | [] | undefined;
 export type MatchFnSignature = (i: CodeNodeIterator) => MatchFnResult;
+export type MatchedFn = (values: CodeNodeIterator[]) => void;
+
+export type Opt<T> = T | undefined;
 
 export { parse, RangerParser };
 
-export const iterator = (rootNode: CodeNode | string) => {
+export const iterator = (
+  rootNode: CodeNode | string,
+  options?: ParserSettings
+) => {
   if (typeof rootNode === "string") {
-    return new CodeNodeIterator(parse(rootNode).children);
+    return new CodeNodeIterator(parse(rootNode, options).children);
   }
   return new CodeNodeIterator(rootNode.children);
 };
@@ -36,6 +42,19 @@ export const OneOf = (...fns: MatchFnSignature[]) => (
     const res = fn(i);
     if (res.length > 0) {
       return res;
+    }
+  }
+  return EMPTY_ARRAY;
+};
+
+export const TestOneOf = (...fns: MatchFnSignature[]) => (
+  i: CodeNodeIterator
+): [CodeNodeIterator, number] | [] => {
+  for (let x = 0; x < fns.length; x++) {
+    const fn = fns[x];
+    const res = fn(i);
+    if (res.length > 0) {
+      return [res[0], 0];
     }
   }
   return EMPTY_ARRAY;
@@ -213,6 +232,13 @@ export class CodeNodeIterator {
     return c;
   }
 
+  from(i: CodeNodeIterator) {
+    this.node = i.node;
+    this.i = i.i;
+    this.c = i.c;
+    return this;
+  }
+
   match(
     tests: Array<(i: CodeNodeIterator) => [CodeNodeIterator, number] | []>,
     fn?: (values: CodeNodeIterator[]) => void
@@ -241,6 +267,31 @@ export class CodeNodeIterator {
 
   m(tests: Array<MatchFnSignature>, fn?: (values: CodeNodeIterator[]) => void) {
     return this.match(tests, fn);
+  }
+
+  case<T>(
+    cases: Array<
+      [
+        Array<MatchFnSignature>,
+        (values: CodeNodeIterator[], iter: CodeNodeIterator) => Opt<T>
+      ]
+    >
+  ): Opt<T> {
+    const start = this.clone();
+    try {
+      for (const c of cases) {
+        this.from(start);
+        const [sig, fn] = c;
+        let values: CodeNodeIterator[];
+        let rv = this.m(sig, params => {
+          values = params;
+        });
+        if (rv) {
+          return fn(values, this);
+        }
+      }
+    } catch (e) {}
+    this.from(start);
   }
 
   test(
@@ -475,3 +526,4 @@ export class CodeNodeIterator {
 }
 
 export const EMPTY_ITERATOR = new CodeNodeIterator([]);
+export type Match = (i: CodeNodeIterator) => [CodeNodeIterator, number] | [];

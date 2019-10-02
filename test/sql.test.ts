@@ -16,19 +16,59 @@ import {
   Ti,
   EMPTY_ARRAY,
   EMPTY_ITERATOR,
-  MatchFnSignature
+  MatchFnSignature,
+  TestOneOf
 } from "../src/NodeIterator";
+import { stat } from "fs";
+
+interface TABLEStatement {
+  tag: "TABLE";
+  schema?: string;
+  name?: string;
+  subquery?: SELECTStatement;
+  alias?: AliasStatement;
+}
+
+interface AliasStatement {
+  tag: "ALIAS";
+  name: string;
+}
+
+interface FROMStatement {
+  tag: "FROM";
+  sources: TABLEStatement[];
+}
+
+interface ColumnExpression {
+  tag: "COL";
+  schema?: string;
+  table?: string;
+  name?: string;
+  column?: string;
+  alias?: string;
+}
+
+interface SELECTStatement {
+  tag: "SELECT";
+  from?: FROMStatement;
+  columns?: ColumnExpression[];
+}
 
 // const iter = new CodeNodeIterator(p.rootNode.children);
 describe("SQL parser test", () => {
   test("Tow Sample SQL statements", () => {
-    const iter = iterator(`
-select * from purchases, (select * from cat where name like 'abba') jeba  ;
+    // -- adding comments ?
+    const iter = iterator(
+      `
+-- SQL comment test
+select * from purchases, (
+    select * from cat where name like 'jerry'
+  ) jeba  ;
 SELECT 
-    AVG(u.age) as keskiarvo, 
+    AVG(u.age) as keskiarvo,  -- comment about average
     min(main.user.length) as pituus, 
-    u.id, 
-    p.id, 
+    u.id,   -- user ID
+    p.id,   -- product ID 
     * 
 FROM 
   main.user u,
@@ -40,7 +80,7 @@ FROM
     from   
       foo, 
       bar, 
-      (select * from zed) zed
+      (select * from table2) zed
    ) fs
 WHERE
     u.name like '%glen%'
@@ -49,7 +89,11 @@ WHERE
   AND
     p.completed = true;
 SELECT max(id) from karhu;  
-  `);
+  `,
+      {
+        lineCommentStart: "--"
+      }
+    );
 
     const ASTERISK = [T("*")];
     let aggrCnt = 0;
@@ -77,6 +121,10 @@ SELECT max(id) from karhu;
     const IsEndOfExpr = (iter): boolean =>
       iter.test(KEYWORDS) || iter.test(COMMA) || iter.test(SEMICOLON);
 
+    const EndOfExpr = [
+      TestOneOf(T(","), T(";"), Ti(["SELECT", "FROM", "WHERE", "ORDER"]))
+    ];
+
     const MatchAlias = (iter): any => {
       const asDef = {
         as: ""
@@ -97,49 +145,46 @@ SELECT max(id) from karhu;
         return asDef;
       }
     };
-    const MatchColumnAccess = (iter): any => {
+    const MatchColumnAccess = (iter): ColumnExpression | undefined => {
       // in case some keyword, ; etc.
-      if (IsEndOfExpr(iter)) return;
-      const tabledef = {
-        name: "column",
-        schema: "",
-        table: "",
-        column: "",
-        alias: undefined
+      // if (IsEndOfExpr(iter)) return;
+      const tabledef: ColumnExpression = {
+        tag: "COL"
       };
-      // <schema>.<table>.<column>
-      if (
-        iter.match([T(), T("."), T(), T("."), T()], ([s, , t, , c]) => {
-          tabledef.schema = s.token();
-          tabledef.table = t.token();
-          tabledef.column = c.token();
-        })
-      ) {
-        tabledef.alias = MatchAlias(iter);
-        return tabledef;
-      }
-      // <table>.<column>
-      if (
-        iter.match([T(), T("."), T()], ([t, , c]) => {
-          tabledef.table = t.token();
-          tabledef.column = c.token();
-        })
-      ) {
-        tabledef.alias = MatchAlias(iter);
-        return tabledef;
-      }
-      // <column>
-      if (
-        iter.match([T()], ([c]) => {
-          tabledef.column = c.token();
-        })
-      ) {
-        tabledef.alias = MatchAlias(iter);
-        return tabledef;
-      }
+      return iter.case([
+        [EndOfExpr, () => undefined],
+        [
+          // <schema>.<table>.<column>
+          [T(), T("."), T(), T("."), T()],
+          ([s, , t, , c], iter) => {
+            tabledef.schema = s.token();
+            tabledef.table = t.token();
+            tabledef.column = c.token();
+            tabledef.alias = MatchAlias(iter);
+            // iff(MatchAlias(iter), a => (tabledef.alias = a));
+            return tabledef;
+          }
+        ],
+        [
+          [T(), T("."), T()],
+          ([t, , c], iter) => {
+            tabledef.table = t.token();
+            tabledef.column = c.token();
+            tabledef.alias = MatchAlias(iter);
+            return tabledef;
+          }
+        ],
+        [
+          [T()],
+          ([c]) => {
+            tabledef.column = c.token();
+            return tabledef;
+          }
+        ]
+      ]);
     };
 
-    const MatchTableAlias = (iter): any => {
+    const MatchTableAlias = (iter): AliasStatement | undefined => {
       if (IsEndOfExpr(iter)) return;
       let alias;
       iter.m([T()], ([t]) => {
@@ -148,52 +193,43 @@ SELECT max(id) from karhu;
       return alias;
     };
 
-    const MatchTableDef = (iter): any => {
-      if (IsEndOfExpr(iter)) return;
-      const tabledef = {
-        name: "tabledef",
-        schema: "",
-        full: "",
-        alias: "",
-        subquery: undefined
-      };
-      // <table>.<column> <alias>
-      // subquery start
-      if (
-        iter.m([E, T()], ([e, t]) => {
-          iff(MatchSELECT(e), sel => (tabledef.subquery = sel));
-          tabledef.alias = t.token();
-        })
-      ) {
-        return tabledef;
-      }
-
-      if (
-        iter.match([T(), T("."), T()], ([s, , full]) => {
-          tabledef.full = full.token();
-          tabledef.schema = s.token();
-        })
-      ) {
-        tabledef.alias = MatchTableAlias(iter);
-        return tabledef;
-      }
-      // <column>
-      if (
-        iter.match([T()], ([full]) => {
-          tabledef.full = full.token();
-        })
-      ) {
-        tabledef.alias = MatchTableAlias(iter);
-        return tabledef;
-      }
-      return undefined;
+    const MatchTableDef = (iter): TABLEStatement | undefined => {
+      // if (IsEndOfExpr(iter)) return;
+      return iter.case([
+        [EndOfExpr, () => undefined],
+        [
+          // TODO: how to match end of expression here in the case statements
+          [E, T()], // <SELECT> <ALIAS>
+          ([e, t]) => ({
+            tag: "TABLE",
+            alias: t.token(),
+            subquery: MatchSELECT(e)
+          })
+        ],
+        [
+          [T(), T("."), T()], // <schema.tablename>
+          ([s, , full], iter) => ({
+            tag: "TABLE",
+            name: full.token(), // <-- problem information lost here!!!
+            schema: s.token(),
+            alias: MatchTableAlias(iter)
+          })
+        ],
+        [
+          [T()], // <TABLENAME>
+          ([full]) => ({
+            tag: "TABLE",
+            name: full.token(),
+            alias: MatchTableAlias(iter)
+          })
+        ]
+      ]);
     };
 
     const MatchAggregate = (iter): any => {
       let res: any = undefined;
       if (
         iter.m([AGGREGATES, E], ([fn, e]) => {
-          // TODO: iterate e
           aggrCnt++;
           res = {
             type: "aggregate",
@@ -202,18 +238,17 @@ SELECT max(id) from karhu;
           };
         })
       ) {
-        res.alias = MatchAlias(iter);
+        iff(MatchAlias(iter), a => (res.alias = a));
       }
       return res;
     };
 
     // will match a select statement
-    const MatchSELECT = (iter): any => {
+    const MatchSELECT = (iter): SELECTStatement => {
       if (iter.match([Ti(["SELECT"])])) {
-        const statement = {
-          name: "SELECT",
-          columns: [],
-          from: []
+        const statement: SELECTStatement = {
+          tag: "SELECT",
+          columns: []
         };
         iter.whileDidProceed(i => {
           if (i.test(KEYWORDS)) return;
@@ -228,16 +263,25 @@ SELECT max(id) from karhu;
 
         // FROM
         if (iter.m([Ti("FROM")])) {
+          const from: FROMStatement = {
+            tag: "FROM",
+            sources: []
+          };
           iter.whileDidProceed(iter => {
             if (iter.test(KEYWORDS)) {
               return;
             }
             iter.m(COMMA);
             iff(MatchTableDef(iter), def => {
-              statement.from.push(def);
+              from.sources.push(def);
             });
           });
+          statement.from = from;
         }
+        // matching where condition here...
+        // if (iter.m([Ti("WHERE")])) {
+        //   statement.where = {};
+        // }
         iter.iterateUntil(iter => !iter.m(SEMICOLON));
         return statement;
       }
@@ -246,6 +290,7 @@ SELECT max(id) from karhu;
     iter.whileDidProceed(iter => {
       iff(MatchSELECT(iter), sel => statements.push(sel));
     });
+    console.log(statements);
     expect(aggrCnt).to.equal(5);
     expect(statements.length).to.equal(3);
     console.log(JSON.stringify(statements, null, 2));
